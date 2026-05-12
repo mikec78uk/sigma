@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(mkdir -p /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering/app/.claude)",
+      "Bash(pkill -f \"vite --port 5173\")",
+      "Bash(mkdir -p /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering/.claude)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls /Users/apple/.claude/projects/-Users-apple-Dropbox-Salmon-Sigma-design-handoff-hospital-ordering/memory/ 2>/dev/null && cat /Users/apple/.claude/projects/-Users-apple-Dropbox-Salmon-Sigma-design-handoff-hospital-ordering/memory/MEMORY.md 2>/dev/null || echo \"No MEMORY.md yet\")",
+      "Bash(npm run *)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering status)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering log --oneline -5)"
+    ]
+  }
+}

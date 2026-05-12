@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sigma Connect — Canvas overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    html, body { height: 100%; background: #efeee9; }
+    .frame-shot { width: 100%; height: 100%; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .frame-shot-wrap { width: 100%; height: 100%; overflow: hidden; background: var(--paper); border-radius: 6px; }
+    .nb { padding: 14px 18px; font-size: 13px; color: var(--ink-2); line-height: 1.5; max-width: 720px; }
+    .nb h3 { font-size: 15px; margin-bottom: 6px; }
+    .nb ul { padding-left: 18px; margin: 6px 0; }
+    .canvas-nav {
+      position: fixed; top: 16px; left: 16px; z-index: 1000;
+      display: flex; gap: 8px; align-items: center;
+      padding: 8px 12px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      font-size: 13px;
+    }
+    .canvas-nav a { color: var(--ink-2); text-decoration: none; }
+    .canvas-nav a:hover { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div class="canvas-nav">
+    <span class="muted">Sigma Connect</span>
+    <span class="muted-2">·</span>
+    <a href="prototype.html">Open prototype <span style="font-size:11px">→</span></a>
+    <span class="muted-2">·</span>
+    <a href="index.html">Index</a>
+  </div>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+
+  <script type="text/babel">
+    const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+    /* An artboard whose content is the live prototype loaded in an iframe,
+       at full 1440x900 and zoomed to fit. */
+    function ScreenFrame({ src, scale = 0.55, w = 1440, h = 920 }) {
+      const containerW = w * scale;
+      const containerH = h * scale;
+      return (
+        <div style={{ width: containerW, height: containerH, overflow: "hidden", background: "var(--paper)", borderRadius: 6 }}>
+          <iframe src={src} style={{
+            width: w, height: h, border: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: "0 0",
+            pointerEvents: "none"
+          }}/>
+        </div>
+      );
+    }
+
+    function Note({ title, children }) {
+      return (
+        <div className="nb panel" style={{ width: 380, height: "auto", background: "#fffef5", borderColor: "#e8e3c7" }}>
+          <div className="label" style={{ marginBottom: 8, color: "#7a6a14" }}>Note</div>
+          <h3>{title}</h3>
+          <div>{children}</div>
+        </div>
+      );
+    }
+
+    function App() {
+      const scale = 0.55;
+      const W = Math.round(1440 * scale);
+      const H = Math.round(920 * scale);
+
+      return (
+        <DesignCanvas>
+          <DCSection id="sec-flow" title="Hospital ordering flow" subtitle="End-to-end: orders landing → start order → build → submit. Each artboard is the live prototype at this step.">
+            <DCArtboard id="01-landing" label="01 · Orders landing" width={W} height={H}>
+              <ScreenFrame src="prototype.html#landing" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="02-new-client" label="02 · New order — pick client" width={W} height={H}>
+              <ScreenFrame src="prototype.html#new-client" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="03-new-type" label="03 · New order — pick type" width={W} height={H}>
+              <ScreenFrame src="prototype.html#new-type" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="04-build" label="04 · Build — split view" width={W} height={H}>
+              <ScreenFrame src="prototype.html#build" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="05-build-edit" label="05 · Line edit + below-MSP warning" width={W} height={H}>
+              <ScreenFrame src="prototype.html#build-edit" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="06-manual" label="06 · Manual pick + shipping" width={W} height={H}>
+              <ScreenFrame src="prototype.html#build-manual" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="07-submitted" label="07 · Submitted" width={W} height={H}>
+              <ScreenFrame src="prototype.html#submitted" scale={scale}/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="sec-variants" title="Layout variants" subtitle="Same data, two ways to organise the catalogue + basket. Toggle via the Tweaks panel in the prototype.">
+            <DCArtboard id="v-split" label="A · Split view" width={W} height={H}>
+              <ScreenFrame src="prototype.html#variant-split" scale={scale}/>
+            </DCArtboard>
+            <DCArtboard id="v-stepped" label="B · Stepped" width={W} height={H}>
+              <ScreenFrame src="prototype.html#variant-stepped" scale={scale}/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="sec-notes" title="Design notes" subtitle="Decisions and open questions.">
+            <DCArtboard id="n-system" label="Design system" width={420} height={420}>
+              <Note title="Greyscale system, B2B density">
+                <ul>
+                  <li>Pure greyscale + 3 functional accents (in / low / out) and 1 warning tint for below-MSP.</li>
+                  <li>Type: Söhne / Helvetica Neue body, JetBrains Mono for SKUs, codes, money.</li>
+                  <li>Comfortable density by default (13–14px body, 14px row padding); compact density toggleable.</li>
+                  <li>Tabular numerals (font-variant-numeric: tabular-nums) on every monetary column for clean alignment.</li>
+                </ul>
+              </Note>
+            </DCArtboard>
+            <DCArtboard id="n-decisions" label="Key UX decisions" width={420} height={520}>
+              <Note title="Why this shape">
+                <ul>
+                  <li><b>Order on behalf of</b> is anchored in a header chip that persists across all sub-screens, so the user never loses sight of which client they're acting for.</li>
+                  <li><b>Catalogue list, not tiles</b> — B2B reality: people search by SKU and scan structured columns (pack, stock, price). Tiles would waste space.</li>
+                  <li><b>Two layouts, one prototype.</b> Split-view for power users (1440+), stepped for narrower screens or training. The Tweaks panel switches live.</li>
+                  <li><b>Below-MSP becomes a single visual moment</b>: amber price-edit + inline banner. No nag, but commercial approval is implied.</li>
+                  <li><b>Manual picking lives at order level</b>: one toggle, one reason code, prompted once. Avoids per-line ceremony.</li>
+                </ul>
+              </Note>
+            </DCArtboard>
+            <DCArtboard id="n-next" label="Next, when ready" width={420} height={420}>
+              <Note title="Open questions / extensions">
+                <ul>
+                  <li>Bulk Order and NRT flows — confirmed as separate workstreams.</li>
+                  <li>Read-only order detail view (clicking a submitted order). Currently stubbed.</li>
+                  <li>Approvals queue for below-MSP submissions.</li>
+                  <li>Saved baskets / order templates (recurring weekly orders).</li>
+                  <li>SAP error/rejection states surfaced back into the orders list.</li>
+                </ul>
+              </Note>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
+  </script>
+</body>
+</html>

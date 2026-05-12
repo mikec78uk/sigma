@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sigma Connect — Hospital Ordering</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="page">
+    <header class="app-header">
+      <div class="app-header__logo">
+        <span class="logo-mark">S</span>
+        <span>Sigma Connect</span>
+      </div>
+    </header>
+
+    <div class="page__body" style="max-width: 900px; margin: 0 auto;">
+      <div class="label" style="margin-bottom: 8px;">Hi-fi greyscale wireframe</div>
+      <h1 style="margin-bottom: 8px;">Hospital ordering system</h1>
+      <p class="muted" style="font-size: 15px; max-width: 640px; margin-bottom: 32px; line-height: 1.55;">
+        End-to-end ordering on behalf of hospital clients. A draft list, basket-building from a 3,475-product catalogue, line-level pricing with below-MSP warnings, manual picking, and SAP submission.
+      </p>
+
+      <div class="row gap-16" style="margin-bottom: 32px;">
+        <a href="prototype.html" style="text-decoration: none; flex: 1;">
+          <div class="panel" style="padding: 24px; cursor: pointer;">
+            <div class="label" style="margin-bottom: 8px;">01</div>
+            <h3 style="font-size: 18px; margin-bottom: 6px;">Interactive prototype</h3>
+            <p class="muted" style="font-size: 13px; line-height: 1.5;">
+              Click through orders, drafts, building a new order, editing line items, and submitting. Use the <b>Tweaks</b> toggle (top-right) to switch between split-view and stepped catalogue layouts, density, stock display, and the persistent client chip.
+            </p>
+          </div>
+        </a>
+        <a href="canvas.html" style="text-decoration: none; flex: 1;">
+          <div class="panel" style="padding: 24px; cursor: pointer;">
+            <div class="label" style="margin-bottom: 8px;">02</div>
+            <h3 style="font-size: 18px; margin-bottom: 6px;">Canvas overview</h3>
+            <p class="muted" style="font-size: 13px; line-height: 1.5;">
+              All screens at once on a pan/zoom canvas. Click any artboard to focus full-screen. Includes layout variants side-by-side and design rationale notes.
+            </p>
+          </div>
+        </a>
+      </div>
+
+      <div class="panel" style="padding: 20px 24px;">
+        <h4 style="margin-bottom: 12px;">Screens included</h4>
+        <ol style="margin: 0; padding-left: 22px; line-height: 1.9; font-size: 13.5px;">
+          <li>Orders landing — list of submitted, on-hold and draft orders with KPIs, client filter, search, pagination</li>
+          <li>New order modal — pick client account → pick order type (Hospital live; Bulk &amp; NRT stubbed)</li>
+          <li>Build order — catalogue search + filters + paginated list, basket panel with editable line items</li>
+          <li>Line item edit — quantity, unit price (with below-MSP warning), line description</li>
+          <li>Order metadata — order-wide description, shipping agent code, manual picking toggle with reason code</li>
+          <li>Submission confirmation — SAP order ID returned</li>
+        </ol>
+      </div>
+    </div>
+
+    <footer class="app-footer" style="margin-top: 64px;">
+      <div class="app-footer__bottom" style="border-top: 0; padding-top: 0;">
+        <span>© 2026 Sigma Pharmaceuticals PLC.</span>
+        <span class="mono">Greyscale wireframe v0.1</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
