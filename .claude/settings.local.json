@@ -12,7 +12,18 @@
       "Bash(npm run *)",
       "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering status)",
       "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering log --oneline -5)",
-      "Bash(rm -rf /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering/app/.git)"
+      "Bash(rm -rf /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering/app/.git)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "WebFetch(domain:playground.hellomike.co.uk)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering log --oneline -3)",
+      "WebFetch(domain:mikec78uk.github.io)",
+      "Bash(gh run *)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering ls-files app/node_modules)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering ls-files app/dist)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering ls-files app/)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering add .github/workflows/deploy.yml)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering commit -m \"Fix: pass base path directly to vite build\")"
     ]
   }
 }

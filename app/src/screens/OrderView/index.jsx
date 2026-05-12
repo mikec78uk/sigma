@@ -24,7 +24,7 @@ export default function OrderView() {
   const { orderId } = useParams()
   const order = location.state?.order
 
-  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
 
   const client = HOSPITAL_CLIENTS.find(c => c.id === order?.clientId)
@@ -94,10 +94,10 @@ export default function OrderView() {
               </button>
               <button
                 className="btn"
-                style={{ color: rejectOpen ? undefined : 'var(--bad)', borderColor: rejectOpen ? undefined : 'rgba(220,38,38,0.3)' }}
-                onClick={() => { setRejectOpen(r => !r); setRejectNote('') }}
+                style={{ color: 'var(--bad)', borderColor: 'rgba(220,38,38,0.3)' }}
+                onClick={() => { setRejectModalOpen(true); setRejectNote('') }}
               >
-                {rejectOpen ? 'Cancel' : 'Reject order'}
+                Reject order
               </button>
             </>
           )}
@@ -107,29 +107,49 @@ export default function OrderView() {
         </div>
       </div>
 
-      {/* Reject note panel */}
-      {rejectOpen && (
-        <div style={{ marginBottom: 20, background: '#fff5f5', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '16px 20px' }}>
-          <div style={{ fontWeight: 600, fontSize: 13.5, color: '#991b1b', marginBottom: 8 }}>
-            Add a rejection note — this will be visible to the order submitter
-          </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <textarea
-              className="input"
-              autoFocus
-              rows={3}
-              placeholder="e.g. Pricing on line 3 is below MSP. Please correct and resubmit."
-              value={rejectNote}
-              onChange={e => setRejectNote(e.target.value)}
-              style={{ flex: 1, fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit' }}
-            />
-            <button
-              className="btn"
-              style={{ background: '#dc2626', color: '#fff', borderColor: '#dc2626', flexShrink: 0, marginTop: 2 }}
-              onClick={handleReject}
-            >
-              Confirm rejection
-            </button>
+      {/* Rejection modal */}
+      {rejectModalOpen && (
+        <div className="scrim">
+          <div className="modal">
+            <div className="modal__head">
+              <div className="row between">
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Reject order</div>
+                  <h2>Reject {orderId}</h2>
+                </div>
+                <button className="btn btn--ghost btn--icon" onClick={() => setRejectModalOpen(false)}><Icon name="x" size={16} /></button>
+              </div>
+            </div>
+            <div className="modal__body">
+              <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginBottom: 16 }}>
+                The submitter will be notified that this order has been rejected.
+              </div>
+              <div className="field">
+                <div className="field__label">Why was this rejected? <span className="muted" style={{ fontWeight: 400 }}>(optional)</span></div>
+                <textarea
+                  className="input"
+                  autoFocus
+                  rows={6}
+                  placeholder="The more detail you provide, the easier it will be for the submitter to correct and resubmit the order."
+                  value={rejectNote}
+                  onChange={e => setRejectNote(e.target.value)}
+                  style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', height: 200, padding: 20 }}
+                />
+              </div>
+            </div>
+            <div className="modal__foot">
+              <div />
+              <div className="row gap-8">
+                <button className="btn" onClick={() => { setRejectModalOpen(false); setRejectNote('') }}>Cancel</button>
+                <button
+                  className="btn"
+                  style={{ background: '#dc2626', color: '#fff', borderColor: '#dc2626' }}
+                  onClick={handleReject}
+                >
+                  Confirm rejection
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

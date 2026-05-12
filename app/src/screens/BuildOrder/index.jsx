@@ -54,7 +54,22 @@ export default function BuildOrder() {
   const [page, setPage] = useState(1)
   const pageSize = 9
 
-  const [lines, setLines] = useState(order?.lines || [])
+  const [draftOosRemoved, setDraftOosRemoved] = useState([])
+
+  // On load, strip any OOS lines from a draft and surface them as a banner
+  const initialLines = useMemo(() => {
+    if (!order?.lines) return []
+    const oos = [], ok = []
+    order.lines.forEach(l => {
+      const current = CATALOGUE.find(p => p.sku === l.sku)
+      if ((current?.stockState ?? l.stockState) === 'out') oos.push(l)
+      else ok.push(l)
+    })
+    if (oos.length) setDraftOosRemoved(oos)
+    return ok
+  }, [])
+
+  const [lines, setLines] = useState(initialLines)
   const [orderDesc, setOrderDesc] = useState(order?.description || '')
   const [poNumber, setPoNumber] = useState(order?.poNumber || '')
   const [shipDate, setShipDate] = useState(order?.shipDate || new Date().toISOString().slice(0, 10))
@@ -229,6 +244,44 @@ export default function BuildOrder() {
           <div>
             <div style={{ fontWeight: 600, fontSize: 13.5, color: '#991b1b', marginBottom: 3 }}>This order was rejected — please review and resubmit</div>
             <div style={{ fontSize: 13, color: '#991b1b' }}>{order.rejectionNote}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Draft OOS removal banner */}
+      {draftOosRemoved.length > 0 && (
+        <div style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+              {draftOosRemoved.length} {draftOosRemoved.length === 1 ? 'item has' : 'items have'} been removed from this order
+            </span>
+            <button
+              onClick={() => setDraftOosRemoved([])}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 2 }}
+            >
+              <Icon name="x" size={14} />
+            </button>
+          </div>
+          <div style={{ padding: '10px 14px', background: '#fff5f5' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <Icon name="alert" size={13} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>
+                  Out of stock — not available for this order
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {draftOosRemoved.map((l, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span className="mono" style={{ fontSize: 11.5, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 4, padding: '1px 6px', color: '#991b1b', flexShrink: 0 }}>
+                        {l.sku}
+                      </span>
+                      <span style={{ fontSize: 12.5, color: '#991b1b' }}>{l.name}</span>
+                      <span style={{ fontSize: 12, color: '#991b1b', opacity: 0.7, marginLeft: 'auto', flexShrink: 0 }}>Quantity ordered: {l.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

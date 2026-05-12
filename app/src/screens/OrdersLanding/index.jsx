@@ -10,13 +10,19 @@ import KPI from './KPI'
 import NewOrderModal from '../NewOrderModal'
 import Toast from '../../components/Toast'
 
+// Persists orders state across navigations (remounts reset useState)
+let _persistedOrders = null
+
 export default function OrdersLanding() {
   const navigate = useNavigate()
   const location = useLocation()
   const showNewModal = !!useMatch('/orders/new')
 
   // Local order state so approve/reject mutations work in-prototype
-  const [orders, setOrders] = useState(ORDERS_SEED)
+  const [orders, setOrders] = useState(() => _persistedOrders ?? ORDERS_SEED)
+
+  // Keep persisted copy in sync
+  useEffect(() => { _persistedOrders = orders }, [orders])
 
   // Guard against React Strict Mode double-firing the effect
   const processedState = useRef(null)
@@ -30,9 +36,11 @@ export default function OrdersLanding() {
     const { approvedId, rejectedId, rejectionNote, savedDraft } = state
     if (approvedId) {
       setOrders(prev => prev.map(o => o.id === approvedId ? { ...o, status: 'submitted' } : o))
+      addToast(`Order ${approvedId} has been approved and submitted.`, 'success')
       navigate('/', { replace: true, state: null })
     } else if (rejectedId) {
       setOrders(prev => prev.map(o => o.id === rejectedId ? { ...o, status: 'rejected', rejectionNote: rejectionNote || null } : o))
+      addToast(`Order ${rejectedId} has been rejected and the submitter has been informed.`, 'error')
       navigate('/', { replace: true, state: null })
     } else if (savedDraft) {
       addToast(`Draft ${savedDraft} saved successfully.`, 'success')
@@ -303,7 +311,7 @@ export default function OrdersLanding() {
           </select>
         </div>
         <button className="btn btn--primary" onClick={handleNewOrder}>
-          <Icon name="plus" size={15} /> New order{selectedClient ? ` for ${selectedClient.name.split(' ')[0]}` : ''}
+          <Icon name="plus" size={15} /> New order{selectedClient ? ` for ${selectedClient.code}` : ''}
         </button>
       </div>
 
