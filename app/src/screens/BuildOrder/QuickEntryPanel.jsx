@@ -1,0 +1,501 @@
+import { useState, useRef, useEffect, Fragment } from 'react'
+import { CATALOGUE } from '../../data'
+import { fmt } from '../../utils/format'
+import Icon from '../../components/Icon'
+import StockDot from '../../components/StockDot'
+
+export default function QuickEntryPanel({
+  lines,
+  addToBasket,
+  setQty,
+  setUnit,
+  setLineDesc,
+  removeLine,
+  unmatchedImport,
+  onDismissUnmatched,
+  oosImport,
+  onDismissOos,
+  onFileSelect,
+  onImportClick,
+}) {
+  const [q, setQ] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [cursor, setCursor] = useState(-1)
+  const [sortCol, setSortCol] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
+  const [openNotes, setOpenNotes] = useState({})
+  const [editingUnit, setEditingUnit] = useState({})
+  const [hoveredNote, setHoveredNote] = useState(null)
+  const inputRef = useRef(null)
+  const dropFileRef = useRef(null)
+
+  useEffect(() => {
+    if (!q.trim()) { setSuggestions([]); setCursor(-1); return }
+    const s = q.toLowerCase()
+    const results = CATALOGUE
+      .filter(p =>
+        p.name.toLowerCase().includes(s) ||
+        p.sku.toLowerCase().includes(s)
+      )
+      .slice(0, 8)
+    setSuggestions(results)
+    setCursor(-1)
+  }, [q])
+
+  // Close suggestions on outside click
+  const wrapRef = useRef(null)
+  useEffect(() => {
+    function handle(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setSuggestions([])
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  function handleKeyDown(e) {
+    if (suggestions.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCursor(c => Math.min(c + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCursor(c => Math.max(c - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const pick = suggestions[cursor >= 0 ? cursor : 0]
+      if (pick) selectProduct(pick)
+    } else if (e.key === 'Escape') {
+      setSuggestions([])
+      setCursor(-1)
+    }
+  }
+
+  function selectProduct(p) {
+    addToBasket(p)
+    setQ('')
+    setSuggestions([])
+    setCursor(-1)
+    inputRef.current?.focus()
+  }
+
+  function toggleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+  }
+
+  function SortCaret({ col }) {
+    if (sortCol !== col) {
+      return <span style={{ marginLeft: 3, opacity: 0.28, fontSize: 9, verticalAlign: 'middle' }}>⬍</span>
+    }
+    return (
+      <span style={{ marginLeft: 3, fontSize: 9, verticalAlign: 'middle', color: 'var(--ink-2)' }}>
+        {sortDir === 'asc' ? '▲' : '▼'}
+      </span>
+    )
+  }
+
+  function sortedLines() {
+    if (!sortCol) return lines
+    const arr = [...lines]
+    arr.sort((a, b) => {
+      let av, bv
+      switch (sortCol) {
+        case 'sku':   av = a.sku;        bv = b.sku;        break
+        case 'name':  av = a.name;       bv = b.name;       break
+        case 'pack':  av = a.pack;       bv = b.pack;       break
+        case 'stock': av = a.stockState; bv = b.stockState; break
+        case 'msp':   av = a.msp;        bv = b.msp;        break
+        case 'unit':  av = a.unit;       bv = b.unit;       break
+        case 'qty':   av = a.qty;        bv = b.qty;        break
+        default:      return 0
+      }
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+      return sortDir === 'asc' ? av - bv : bv - av
+    })
+    return arr
+  }
+
+  function startEditUnit(sku, val) {
+    setEditingUnit(prev => ({ ...prev, [sku]: (Math.round(val * 100) / 100).toFixed(2) }))
+  }
+
+  function commitUnit(l) {
+    const draft = editingUnit[l.sku]
+    setEditingUnit(prev => { const { [l.sku]: _, ...rest } = prev; return rest })
+    if (draft === undefined) return
+    const raw = parseFloat(draft)
+    if (isNaN(raw) || raw <= 0) return
+    const snapped = raw < l.msp ? l.msp : Math.round(raw * 100) / 100
+    setUnit(l.sku, snapped)
+  }
+
+  function downloadTemplate() {
+    const csv = 'SKU,Product Name,Qty\nSC-04128,Amoxicillin 250mg/5ml Sus,10\nSC-04227,Amoxicillin 500mg Caps,4\n'
+    const a = document.createElement('a')
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+    a.download = 'sigma-order-template.csv'
+    a.click()
+  }
+
+  const hasItems = lines.length > 0
+
+  const COLS = [
+    { col: 'sku',   label: 'Code',       right: false },
+    { col: 'name',  label: 'Product',    right: false },
+    { col: 'pack',  label: 'Pack',       right: false },
+    { col: 'stock', label: 'Stock',      right: false },
+    { col: 'msp',   label: 'MSP',        right: true  },
+    { col: 'unit',  label: 'Unit Price', right: true  },
+    { col: 'qty',   label: 'Qty',        right: true  },
+  ]
+
+  return (
+    <div className="panel" style={{ flex: 1, minWidth: 0 }}>
+      <div className="panel__head">
+        <div>
+          <h3 style={{ fontSize: 18 }}>Create order</h3>
+          {!hasItems && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Search by name or SKU, or upload a spreadsheet</div>
+          )}
+        </div>
+        {hasItems && (
+          <button className="btn" onClick={onImportClick}>
+            <Icon name="doc" size={14} /> Import spreadsheet
+          </button>
+        )}
+      </div>
+
+      {/* Autocomplete search */}
+      <div
+        ref={wrapRef}
+        style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', position: 'relative' }}
+      >
+        <div className="search" style={{ width: '100%' }}>
+          <span className="search__icon"><Icon name="search" size={15} /></span>
+          <input
+            ref={inputRef}
+            className="input"
+            placeholder="Search by product name or SKU code…"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            style={{ width: '100%' }}
+          />
+        </div>
+        {suggestions.length > 0 && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% - 2px)', left: 16, right: 16, zIndex: 200,
+            background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.10)', overflow: 'hidden',
+          }}>
+            {suggestions.map((p, i) => (
+              <div
+                key={p.sku}
+                onMouseDown={() => selectProduct(p)}
+                onMouseEnter={() => setCursor(i)}
+                style={{
+                  padding: '9px 12px', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', gap: 10,
+                  background: cursor === i ? 'var(--surface-2)' : '#fff',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74 }}>{p.sku}</span>
+                <span style={{ flex: 1, fontSize: 13.5 }}>{p.name}</span>
+                <span className="muted" style={{ fontSize: 11.5, marginRight: 6 }}>{p.pack}</span>
+                <StockDot state={p.stockState} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Blank state */}
+      {!hasItems && (
+        <div style={{ padding: '12px 16px 16px' }}>
+          <input
+            ref={dropFileRef}
+            type="file"
+            accept=".csv"
+            style={{ display: 'none' }}
+            onChange={e => { if (e.target.files[0]) onFileSelect(e.target.files[0]); e.target.value = '' }}
+          />
+          <div
+            onClick={() => dropFileRef.current?.click()}
+            style={{
+              border: '2px dashed var(--border)', borderRadius: 10,
+              padding: '36px 24px', textAlign: 'center', cursor: 'pointer',
+              background: 'var(--surface)', transition: 'border-color 0.15s, background 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--ink-3)'
+              e.currentTarget.style.background = 'var(--surface-2)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.background = 'var(--surface)'
+            }}
+          >
+            <Icon name="doc" size={28} style={{ color: 'var(--ink-3)', marginBottom: 10 }} />
+            <div style={{ fontWeight: 500, marginBottom: 4 }}>Upload a spreadsheet to populate the order</div>
+            <div className="muted" style={{ fontSize: 13 }}>
+              Drop a .csv file here, or click to browse
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <button
+              className="btn btn--sm btn--ghost"
+              onClick={downloadTemplate}
+              style={{ fontSize: 12, color: 'var(--ink-3)', gap: 5 }}
+            >
+              <Icon name="download" size={12} /> Download order template
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Combined import issues banner */}
+      {(oosImport?.length > 0 || unmatchedImport?.length > 0) && (
+        <div style={{ margin: '12px 16px 12px', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+              {(oosImport?.length || 0) + (unmatchedImport?.length || 0)} {(oosImport?.length || 0) + (unmatchedImport?.length || 0) === 1 ? 'item' : 'items'} from your spreadsheet could not be added
+            </span>
+            <button
+              onClick={() => { onDismissOos?.(); onDismissUnmatched?.() }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 2, flexShrink: 0 }}
+            >
+              <Icon name="x" size={14} />
+            </button>
+          </div>
+
+          {oosImport?.length > 0 && (
+            <div style={{ padding: '10px 12px', background: '#fff5f5', borderBottom: unmatchedImport?.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <Icon name="alert" size={13} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>
+                    Out of stock — not added
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {oosImport.map((r, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <span className="mono" style={{ fontSize: 11.5, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 4, padding: '1px 6px', color: '#991b1b', flexShrink: 0 }}>
+                          {r.row != null && <span style={{ opacity: 0.6, marginRight: 4 }}>row {r.row}</span>}
+                          {r.sku}
+                        </span>
+                        <span style={{ fontSize: 12.5, color: '#991b1b' }}>{r.product?.name}</span>
+                        <span style={{ fontSize: 12, color: '#991b1b', opacity: 0.7, marginLeft: 'auto', flexShrink: 0 }}>Quantity ordered: {r.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {unmatchedImport?.length > 0 && (
+            <div style={{ padding: '10px 12px', background: '#fefce8' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <Icon name="alert" size={13} style={{ color: '#92400e', flexShrink: 0, marginTop: 1 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#92400e', marginBottom: 4 }}>
+                    SKU not recognised — check for typos
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {unmatchedImport.map((r, i) => (
+                      <span key={i} className="mono" style={{ fontSize: 11.5, background: 'rgba(252,211,77,0.2)', border: '1px solid #fde68a', borderRadius: 4, padding: '1px 6px', color: '#78350f' }}>
+                        {r.row != null && <span style={{ opacity: 0.6, marginRight: 4 }}>row {r.row}</span>}
+                        {r.sku}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Items table */}
+      {hasItems && (
+        <div style={{ padding: '16px 16px 14px' }}>
+          <div className="label" style={{ fontSize: 12 }}>Your order includes:</div>
+        </div>
+      )}
+      {hasItems && (
+        <div className="panel__body panel__body--flush">
+          <table className="tbl">
+            <thead>
+              <tr>
+                {COLS.map(({ col, label, right }) => (
+                  <th
+                    key={col}
+                    className={right ? 'right' : ''}
+                    onClick={() => toggleSort(col)}
+                    style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    {label}<SortCaret col={col} />
+                  </th>
+                ))}
+                <th style={{ width: 68 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {sortedLines().map(l => {
+                const noteOpen = openNotes[l.sku]
+                const unitDraft = editingUnit[l.sku]
+                const displayUnit = unitDraft !== undefined ? unitDraft : (Math.round(l.unit * 100) / 100).toFixed(2)
+                const draftVal = unitDraft !== undefined ? parseFloat(unitDraft) : null
+                const isBelowMsp = unitDraft !== undefined
+                  ? (!isNaN(draftVal) && draftVal < l.msp)
+                  : l.unit < l.msp - 0.001
+                const isOos = l.stockState === 'out'
+                return (
+                  <Fragment key={l.sku}>
+                    <tr style={isOos ? { background: 'rgba(239,68,68,0.04)' } : {}}>
+                      <td className="mono muted" style={{ fontSize: 12 }}>{l.sku}</td>
+                      <td style={{ maxWidth: 200 }}>
+                        <div style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
+                        {isOos && (
+                          <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, whiteSpace: 'nowrap' }}>
+                            ⚠ Out of stock — fulfilment not guaranteed
+                          </div>
+                        )}
+                      </td>
+                      <td className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{l.pack}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}><StockDot state={l.stockState} /></td>
+                      <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
+                      <td className="right" style={{ minWidth: 88 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
+                            <input
+                              className="input"
+                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
+                              value={displayUnit}
+                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.sku]: e.target.value }))}
+                              onFocus={() => startEditUnit(l.sku, l.unit)}
+                              onBlur={() => commitUnit(l)}
+                            />
+                          </div>
+                          {isBelowMsp && (
+                            <div style={{ fontSize: 10.5, color: '#dc2626', marginTop: 2, whiteSpace: 'nowrap' }}>
+                              Must be MSP or above
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="right" style={{ minWidth: 60 }}>
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          style={{ width: 50, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
+                          value={l.qty}
+                          onChange={e => {
+                            const v = parseInt(e.target.value, 10)
+                            if (!isNaN(v) && v > 0) setQty(l.sku, v)
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              className="btn btn--ghost btn--icon btn--sm"
+                              title={!l.description ? 'Add line note' : undefined}
+                              style={{
+                                color: l.description ? 'var(--ink)' : noteOpen ? 'var(--ink-2)' : 'var(--ink-3)',
+                                background: l.description && !noteOpen ? 'var(--surface-2)' : undefined,
+                                borderColor: l.description && !noteOpen ? 'var(--border)' : undefined,
+                              }}
+                              onClick={() => setOpenNotes(n => ({ ...n, [l.sku]: !n[l.sku] }))}
+                              onMouseEnter={() => l.description && !noteOpen && setHoveredNote(l.sku)}
+                              onMouseLeave={() => setHoveredNote(null)}
+                            >
+                              <Icon name="edit" size={13} />
+                              {l.description && !noteOpen && (
+                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--ink-2)', flexShrink: 0 }} />
+                              )}
+                            </button>
+                            {hoveredNote === l.sku && l.description && (
+                              <div style={{
+                                position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
+                                background: 'var(--ink)', color: '#fff', fontSize: 12, lineHeight: 1.4,
+                                padding: '6px 10px', borderRadius: 6, whiteSpace: 'pre-wrap',
+                                maxWidth: 260, minWidth: 120, wordBreak: 'break-word',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                                pointerEvents: 'none',
+                              }}>
+                                {l.description}
+                                <div style={{
+                                  position: 'absolute', top: '100%', right: 10,
+                                  borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                                  borderTop: '5px solid var(--ink)',
+                                }} />
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            className="btn btn--ghost btn--icon btn--sm"
+                            title="Remove line"
+                            style={{ color: 'var(--ink-3)' }}
+                            onClick={() => removeLine(l.sku)}
+                          >
+                            <Icon name="trash" size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {noteOpen && (
+                      <tr key={l.sku + '-note'}>
+                        <td colSpan={8} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ position: 'relative', flex: 1 }}>
+                              <input
+                                className="input"
+                                placeholder="Line note (visible on SAP order line)…"
+                                value={l.description || ''}
+                                onChange={e => setLineDesc(l.sku, e.target.value)}
+                                style={{ fontSize: 12.5, width: '100%', paddingRight: l.description ? 28 : undefined }}
+                                autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter') setOpenNotes(n => ({ ...n, [l.sku]: false })) }}
+                              />
+                              {l.description && (
+                                <button
+                                  onMouseDown={e => { e.preventDefault(); setLineDesc(l.sku, '') }}
+                                  style={{
+                                    position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: 'var(--ink-3)', padding: 2, lineHeight: 1, display: 'flex',
+                                  }}
+                                  title="Clear note"
+                                >
+                                  <Icon name="x" size={12} />
+                                </button>
+                              )}
+                            </div>
+                            <button
+                              className="btn btn--sm btn--primary"
+                              onClick={() => setOpenNotes(n => ({ ...n, [l.sku]: false }))}
+                            >
+                              Save note
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
