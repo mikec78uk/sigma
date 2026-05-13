@@ -65,7 +65,7 @@ export default function QuickEntryPanel({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       const pick = suggestions[cursor >= 0 ? cursor : 0]
-      if (pick) selectProduct(pick)
+      if (pick && pick.stockState !== 'out') selectProduct(pick)
     } else if (e.key === 'Escape') {
       setSuggestions([])
       setCursor(-1)
@@ -191,24 +191,39 @@ export default function QuickEntryPanel({
             background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
             boxShadow: '0 6px 20px rgba(0,0,0,0.10)', overflow: 'hidden',
           }}>
-            {suggestions.map((p, i) => (
-              <div
-                key={p.sku}
-                onMouseDown={() => selectProduct(p)}
-                onMouseEnter={() => setCursor(i)}
-                style={{
-                  padding: '9px 12px', cursor: 'pointer', display: 'flex',
-                  alignItems: 'center', gap: 10,
-                  background: cursor === i ? 'var(--surface-2)' : '#fff',
-                  borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
-                }}
-              >
-                <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74 }}>{p.sku}</span>
-                <span style={{ flex: 1, fontSize: 13.5 }}>{p.name}</span>
-                <span className="muted" style={{ fontSize: 11.5, marginRight: 6 }}>{p.pack}</span>
-                <StockDot state={p.stockState} />
-              </div>
-            ))}
+            {suggestions.map((p, i) => {
+              const isOos = p.stockState === 'out'
+              return (
+                <div
+                  key={p.sku}
+                  onMouseDown={isOos ? undefined : () => selectProduct(p)}
+                  onMouseEnter={() => !isOos && setCursor(i)}
+                  style={{
+                    padding: '9px 12px', display: 'flex',
+                    alignItems: 'center', gap: 10,
+                    cursor: isOos ? 'default' : 'pointer',
+                    opacity: isOos ? 0.45 : 1,
+                    background: !isOos && cursor === i ? 'var(--surface-2)' : '#fff',
+                    borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74 }}>{p.sku}</span>
+                  <span style={{ flex: 1, fontSize: 13.5 }}>{p.name}</span>
+                  <span className="muted" style={{ fontSize: 11.5 }}>{p.pack}</span>
+                  <StockDot state={p.stockState} />
+                  {!isOos && (
+                    <span style={{
+                      fontSize: 11.5, fontWeight: 600,
+                      color: cursor === i ? 'var(--ink)' : 'var(--ink-3)',
+                      background: cursor === i ? 'var(--surface-2)' : 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 5, padding: '2px 8px',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                    }}>+ Add</span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
