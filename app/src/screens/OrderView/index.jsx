@@ -77,7 +77,7 @@ export default function OrderView() {
             <StatusBadge status={order.status} />
           </div>
           <div className="page-h__sub">
-            <span>{client?.name}</span>
+            <span>{client?.name}{client?.postcode && ` (${client.postcode})`}</span>
             {client && <span style={{ margin: '0 6px', color: 'var(--ink-4)' }}>·</span>}
             <span className="mono">{client?.code}</span>
             {order.placed && <><span style={{ margin: '0 6px', color: 'var(--ink-4)' }}>·</span><span>Placed {order.placed}</span></>}

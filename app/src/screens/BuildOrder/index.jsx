@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { HOSPITAL_CLIENTS, CATALOGUE } from '../../data'
+import { HOSPITAL_CLIENTS, CATALOGUE, NRT_CATALOGUE, NRT_CATEGORIES, CATEGORIES } from '../../data'
 import { fmt } from '../../utils/format'
 import Icon from '../../components/Icon'
 import CataloguePanel from './CataloguePanel'
@@ -19,6 +19,7 @@ export default function BuildOrder() {
   const [importInitialFile, setImportInitialFile] = useState(null)
   const [unmatchedImport, setUnmatchedImport] = useState([])
   const [oosImport, setOosImport] = useState([])
+  const [insufficientImport, setInsufficientImport] = useState([])
 
   function processFileQuick(file) {
     const reader = new FileReader()
@@ -34,14 +35,15 @@ export default function BuildOrder() {
         const cols = line.split(',').map(c => c.trim().replace(/"/g, ''))
         return { sku: cols[skuCol] || '', qty: Math.max(0, parseInt(cols[qtyCol], 10) || 0), row: i + 2 }
       }).filter(r => r.sku && r.qty > 0)
-      const matched = [], unmatched = [], oos = []
+      const matched = [], unmatched = [], oos = [], insufficient = []
       parsed.forEach(r => {
-        const product = CATALOGUE.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
+        const product = activeCatalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
         if (!product) unmatched.push(r)
-        else if (product.stockState === 'out') oos.push({ ...r, product })
+        else if (product.stockState === 'out') oos.push({ ...r, product, available: 0 })
+        else if (product.stock < r.qty) insufficient.push({ ...r, product, available: product.stock })
         else matched.push({ product, qty: r.qty })
       })
-      handleImportQuick(matched, unmatched, oos)
+      handleImportQuick(matched, unmatched, oos, insufficient)
     }
     reader.readAsText(file)
   }
@@ -78,6 +80,9 @@ export default function BuildOrder() {
   const [editLineId, setEditLineId] = useState(null)
 
   const client = HOSPITAL_CLIENTS.find(c => c.id === order?.clientId)
+  const isNrt = order?.type === 'nrt'
+  const activeCatalogue = isNrt ? NRT_CATALOGUE : CATALOGUE
+  const activeCategories = isNrt ? NRT_CATEGORIES : CATEGORIES
 
   useEffect(() => {
     if (layout === 'split' || layout === 'quick') setStep('build')
@@ -85,7 +90,7 @@ export default function BuildOrder() {
   }, [layout])
 
   const filtered = useMemo(() => {
-    let list = CATALOGUE
+    let list = activeCatalogue
     if (cat !== 'All') list = list.filter(p => p.category === cat)
     if (stockOnly) list = list.filter(p => p.stockState !== 'out')
     if (dtOnly) list = list.filter(p => p.dt)
@@ -98,13 +103,17 @@ export default function BuildOrder() {
       )
     }
     return list
-  }, [q, cat, stockOnly, dtOnly])
+  }, [q, cat, stockOnly, dtOnly, activeCatalogue])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0)
-  const total = subtotal
+  const mldDiscount = lines.reduce((s, l) => {
+    const pct = parseFloat(l.mld)
+    return s + (isNaN(pct) || pct <= 0 ? 0 : l.unit * l.qty * pct / 100)
+  }, 0)
+  const total = subtotal - mldDiscount
 
   function findLine(sku) { return lines.find(l => l.sku === sku) }
 
@@ -117,6 +126,7 @@ export default function BuildOrder() {
         sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
         unit: p.promo || p.msp, qty: 1, description: '',
         stock: p.stock, stockState: p.stockState,
+        variants: p.variants || null, variant: '', mld: '',
       }, ...lines])
     }
   }
@@ -131,8 +141,17 @@ export default function BuildOrder() {
         sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
         unit: unitPrice, qty: 1, description: '',
         stock: p.stock, stockState: p.stockState,
+        variants: p.variants || null, variant: '', mld: '',
       }, ...lines])
     }
+  }
+
+  function setVariant(sku, variant) {
+    setLines(lines.map(l => l.sku === sku ? { ...l, variant } : l))
+  }
+
+  function setMld(sku, mld) {
+    setLines(lines.map(l => l.sku === sku ? { ...l, mld } : l))
   }
 
   function setQty(sku, qty) {
@@ -158,14 +177,18 @@ export default function BuildOrder() {
         if (idx >= 0) {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
-          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: p.promo ?? p.msp, qty, description: '', stock: p.stock, stockState: p.stockState })
+          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: p.promo ?? p.msp, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
     })
+    // User reviewed issues in the modal — clear any on-page banners
+    setOosImport([])
+    setInsufficientImport([])
+    setUnmatchedImport([])
   }
 
-  function handleImportQuick(importedLines, importedUnmatched = [], importedOos = []) {
+  function handleImportQuick(importedLines, importedUnmatched = [], importedOos = [], importedInsufficient = []) {
     setLines(prev => {
       const next = [...prev]
       importedLines.forEach(({ product: p, qty }) => {
@@ -174,13 +197,14 @@ export default function BuildOrder() {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
           const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
-          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: unitPrice, qty, description: '', stock: p.stock, stockState: p.stockState })
+          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: unitPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
     })
     if (importedUnmatched.length > 0) setUnmatchedImport(importedUnmatched)
     if (importedOos.length > 0) setOosImport(importedOos)
+    if (importedInsufficient.length > 0) setInsufficientImport(importedInsufficient)
   }
 
   function handleClear() {
@@ -191,6 +215,8 @@ export default function BuildOrder() {
     setAgent('DPDP-NXT')
     setManualPick({ enabled: false, reasonCode: '', note: '' })
     setUnmatchedImport([])
+    setOosImport([])
+    setInsufficientImport([])
   }
 
   function handleSubmit() {
@@ -225,9 +251,9 @@ export default function BuildOrder() {
 
       <div className="page-h">
         <div>
-          <h1 className="page-h__title">{client?.name}</h1>
+          <h1 className="page-h__title">{client?.name}{client?.postcode && <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}> ({client.postcode})</span>}</h1>
           <div className="page-h__sub">
-            <span className="mono">{client?.code}</span> · {client?.group} · Hospital order
+            <span className="mono">{client?.code}</span> · {client?.group} · {isNrt ? 'NRT order' : 'Hospital order'}
             <span style={{ marginLeft: 10 }} className="badge badge--draft">Draft</span>
           </div>
         </div>
@@ -305,16 +331,21 @@ export default function BuildOrder() {
       {layout === 'quick' && (
         <div className="builder">
           <QuickEntryPanel
+            catalogue={activeCatalogue}
             lines={lines}
             addToBasket={addToBasketQuick}
             setQty={setQty}
             setUnit={setUnit}
             setLineDesc={setLineDesc}
+            setVariant={setVariant}
+            setMld={setMld}
             removeLine={removeLine}
             unmatchedImport={unmatchedImport}
             onDismissUnmatched={() => setUnmatchedImport([])}
             oosImport={oosImport}
             onDismissOos={() => setOosImport([])}
+            insufficientImport={insufficientImport}
+            onDismissInsufficient={() => setInsufficientImport([])}
             onFileSelect={processFileQuick}
             onImportClick={() => { setImportInitialFile(null); setShowImport(true) }}
           />
@@ -343,6 +374,8 @@ export default function BuildOrder() {
         {(layout === 'split' || step === 'catalogue') && (
           <div>
             <CataloguePanel
+              catalogue={activeCatalogue}
+              categories={activeCategories}
               q={q} setQ={v => { setQ(v); setPage(1) }}
               cat={cat} setCat={v => { setCat(v); setPage(1) }}
               stockOnly={stockOnly} setStockOnly={setStockOnly}
@@ -438,8 +471,9 @@ export default function BuildOrder() {
 
       {showImport && (
         <SpreadsheetImportModal
+          catalogue={activeCatalogue}
           onImport={layout === 'quick' ? handleImportQuick : handleImport}
-          onClose={() => { setShowImport(false); setImportInitialFile(null) }}
+          onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]) }}
           initialFile={importInitialFile}
         />
       )}

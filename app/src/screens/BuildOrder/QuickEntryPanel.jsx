@@ -1,20 +1,25 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
-import { CATALOGUE } from '../../data'
 import { fmt } from '../../utils/format'
 import Icon from '../../components/Icon'
 import StockDot from '../../components/StockDot'
+import VariantSelect from './VariantSelect'
 
 export default function QuickEntryPanel({
+  catalogue = [],
   lines,
   addToBasket,
   setQty,
   setUnit,
   setLineDesc,
+  setVariant,
+  setMld,
   removeLine,
   unmatchedImport,
   onDismissUnmatched,
   oosImport,
   onDismissOos,
+  insufficientImport,
+  onDismissInsufficient,
   onFileSelect,
   onImportClick,
 }) {
@@ -28,11 +33,23 @@ export default function QuickEntryPanel({
   const [hoveredNote, setHoveredNote] = useState(null)
   const inputRef = useRef(null)
   const dropFileRef = useRef(null)
+  const variantRefs = useRef({})
+  const prevLinesRef = useRef([])
+
+  // Auto-focus variant select when a variant-bearing line is first added
+  useEffect(() => {
+    const prevSkus = new Set(prevLinesRef.current.map(l => l.sku))
+    const newVariantLine = lines.find(l => l.variants?.length > 0 && !l.variant && !prevSkus.has(l.sku))
+    if (newVariantLine) {
+      variantRefs.current[newVariantLine.sku]?.focus()
+    }
+    prevLinesRef.current = lines
+  }, [lines])
 
   useEffect(() => {
     if (!q.trim()) { setSuggestions([]); setCursor(-1); return }
     const s = q.toLowerCase()
-    const results = CATALOGUE
+    const results = catalogue
       .filter(p =>
         p.name.toLowerCase().includes(s) ||
         p.sku.toLowerCase().includes(s)
@@ -40,7 +57,7 @@ export default function QuickEntryPanel({
       .slice(0, 8)
     setSuggestions(results)
     setCursor(-1)
-  }, [q])
+  }, [q, catalogue])
 
   // Close suggestions on outside click
   const wrapRef = useRef(null)
@@ -65,7 +82,7 @@ export default function QuickEntryPanel({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       const pick = suggestions[cursor >= 0 ? cursor : 0]
-      if (pick && pick.stockState !== 'out') selectProduct(pick)
+      if (pick && pick.stockState !== 'out' && !pick.exportRestricted) selectProduct(pick)
     } else if (e.key === 'Escape') {
       setSuggestions([])
       setCursor(-1)
@@ -127,12 +144,12 @@ export default function QuickEntryPanel({
     if (draft === undefined) return
     const raw = parseFloat(draft)
     if (isNaN(raw) || raw <= 0) return
-    const snapped = raw < l.msp ? l.msp : Math.round(raw * 100) / 100
+    const snapped = Math.round(raw * 100) / 100
     setUnit(l.sku, snapped)
   }
 
   function downloadTemplate() {
-    const csv = 'SKU,Product Name,Qty\nSC-04128,Amoxicillin 250mg/5ml Sus,10\nSC-04227,Amoxicillin 500mg Caps,4\n'
+    const csv = 'SKU,Product Name,Qty\nSC-04128,Amoxicillin 250mg/5ml Oral Suspension,10\nSC-07811,Paracetamol 500mg Tablets,20\nSC-04341,Clarithromycin 500mg Tablets,10\nSC-04219,Co-amoxiclav 625mg Tablets,100\n'
     const a = document.createElement('a')
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
     a.download = 'sigma-order-template.csv'
@@ -141,14 +158,17 @@ export default function QuickEntryPanel({
 
   const hasItems = lines.length > 0
 
+  const hasVariantLines = lines.some(l => l.variants?.length > 0)
+
   const COLS = [
-    { col: 'sku',   label: 'Code',       right: false },
-    { col: 'name',  label: 'Product',    right: false },
-    { col: 'pack',  label: 'Pack',       right: false },
-    { col: 'stock', label: 'Stock',      right: false },
-    { col: 'msp',   label: 'MSP',        right: true  },
-    { col: 'unit',  label: 'Unit Price', right: true  },
-    { col: 'qty',   label: 'Qty',        right: true  },
+    { col: 'sku',     label: 'Code',       right: false },
+    { col: 'name',    label: 'Product',    right: false },
+    ...(hasVariantLines ? [{ col: 'variant', label: 'Variant', right: false }] : []),
+    { col: 'stock',   label: 'Stock',      right: false },
+    { col: 'msp',     label: 'MSP',        right: true  },
+    { col: 'unit',    label: 'Unit Price', right: true  },
+    { col: 'mld',     label: 'MLD %',      right: true  },
+    { col: 'qty',     label: 'Qty',        right: true  },
   ]
 
   return (
@@ -193,33 +213,48 @@ export default function QuickEntryPanel({
           }}>
             {suggestions.map((p, i) => {
               const isOos = p.stockState === 'out'
+              const isExportRestricted = !!p.exportRestricted
+              const isBlocked = isOos || isExportRestricted
               return (
                 <div
                   key={p.sku}
-                  onMouseDown={isOos ? undefined : () => selectProduct(p)}
-                  onMouseEnter={() => !isOos && setCursor(i)}
+                  onMouseDown={isBlocked ? undefined : () => selectProduct(p)}
+                  onMouseEnter={() => !isBlocked && setCursor(i)}
                   style={{
                     padding: '9px 12px', display: 'flex',
                     alignItems: 'center', gap: 10,
-                    cursor: isOos ? 'default' : 'pointer',
+                    cursor: isBlocked ? 'default' : 'pointer',
                     opacity: isOos ? 0.45 : 1,
-                    background: !isOos && cursor === i ? 'var(--surface-2)' : '#fff',
+                    background: !isBlocked && cursor === i ? 'var(--surface-2)' : '#fff',
                     borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
                   }}
                 >
-                  <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74 }}>{p.sku}</span>
-                  <span style={{ flex: 1, fontSize: 13.5 }}>{p.name}</span>
-                  <span className="muted" style={{ fontSize: 11.5 }}>{p.pack}</span>
-                  <StockDot state={p.stockState} />
-                  {!isOos && (
+                  <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74, opacity: isExportRestricted ? 0.45 : 1 }}>{p.sku}</span>
+                  <span style={{ flex: 1, fontSize: 13.5, opacity: isExportRestricted ? 0.45 : 1 }}>{p.name}</span>
+                  {isExportRestricted ? (
                     <span style={{
-                      fontSize: 11.5, fontWeight: 600,
-                      color: cursor === i ? 'var(--ink)' : 'var(--ink-3)',
-                      background: cursor === i ? 'var(--surface-2)' : 'var(--surface-2)',
-                      border: '1px solid var(--border)',
+                      fontSize: 11.5, fontWeight: 500,
+                      color: '#92400e',
+                      background: '#fefce8',
+                      border: '1px solid #fde68a',
                       borderRadius: 5, padding: '2px 8px',
                       whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>+ Add</span>
+                    }}>Not available for export</span>
+                  ) : (
+                    <>
+                      <span className="muted" style={{ fontSize: 11.5 }}>{p.pack}</span>
+                      <StockDot state={p.stockState} />
+                      {!isOos && (
+                        <span style={{
+                          fontSize: 11.5, fontWeight: 600,
+                          color: cursor === i ? 'var(--ink)' : 'var(--ink-3)',
+                          background: 'var(--surface-2)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 5, padding: '2px 8px',
+                          whiteSpace: 'nowrap', flexShrink: 0,
+                        }}>+ Add</span>
+                      )}
+                    </>
                   )}
                 </div>
               )
@@ -273,37 +308,37 @@ export default function QuickEntryPanel({
       )}
 
       {/* Combined import issues banner */}
-      {(oosImport?.length > 0 || unmatchedImport?.length > 0) && (
+      {(oosImport?.length > 0 || insufficientImport?.length > 0 || unmatchedImport?.length > 0) && (
         <div style={{ margin: '12px 16px 12px', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>
-              {(oosImport?.length || 0) + (unmatchedImport?.length || 0)} {(oosImport?.length || 0) + (unmatchedImport?.length || 0) === 1 ? 'item' : 'items'} from your spreadsheet could not be added
+              {(oosImport?.length || 0) + (insufficientImport?.length || 0) + (unmatchedImport?.length || 0)} {((oosImport?.length || 0) + (insufficientImport?.length || 0) + (unmatchedImport?.length || 0)) === 1 ? 'item' : 'items'} from your spreadsheet could not be added
             </span>
             <button
-              onClick={() => { onDismissOos?.(); onDismissUnmatched?.() }}
+              onClick={() => { onDismissOos?.(); onDismissInsufficient?.(); onDismissUnmatched?.()  }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 2, flexShrink: 0 }}
             >
               <Icon name="x" size={14} />
             </button>
           </div>
 
-          {oosImport?.length > 0 && (
+          {/* Insufficient stock (OOS + partial) — grouped together */}
+          {(oosImport?.length > 0 || insufficientImport?.length > 0) && (
             <div style={{ padding: '10px 12px', background: '#fff5f5', borderBottom: unmatchedImport?.length > 0 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <Icon name="alert" size={13} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>
-                    Out of stock — not added
+                    Insufficient stock — not added
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {oosImport.map((r, i) => (
+                    {[...(oosImport || []), ...(insufficientImport || [])].map((r, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                         <span className="mono" style={{ fontSize: 11.5, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 4, padding: '1px 6px', color: '#991b1b', flexShrink: 0 }}>
-                          {r.row != null && <span style={{ opacity: 0.6, marginRight: 4 }}>row {r.row}</span>}
                           {r.sku}
                         </span>
-                        <span style={{ fontSize: 12.5, color: '#991b1b' }}>{r.product?.name}</span>
-                        <span style={{ fontSize: 12, color: '#991b1b', opacity: 0.7, marginLeft: 'auto', flexShrink: 0 }}>Quantity ordered: {r.qty}</span>
+                        <span style={{ fontSize: 12.5, color: '#991b1b', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.product?.name}</span>
+                        <span style={{ fontSize: 11.5, color: '#991b1b', opacity: 0.8, flexShrink: 0 }}>Requested: {r.qty} · Available: {r.available ?? 0}</span>
                       </div>
                     ))}
                   </div>
@@ -312,6 +347,7 @@ export default function QuickEntryPanel({
             </div>
           )}
 
+          {/* Unrecognised SKUs */}
           {unmatchedImport?.length > 0 && (
             <div style={{ padding: '10px 12px', background: '#fefce8' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -369,19 +405,35 @@ export default function QuickEntryPanel({
                   ? (!isNaN(draftVal) && draftVal < l.msp)
                   : l.unit < l.msp - 0.001
                 const isOos = l.stockState === 'out'
+                const hasMld = l.mld !== '' && !isNaN(parseFloat(l.mld)) && parseFloat(l.mld) > 0
                 return (
                   <Fragment key={l.sku}>
-                    <tr style={isOos ? { background: 'rgba(239,68,68,0.04)' } : {}}>
+                    <tr style={isOos ? { background: 'rgba(239,68,68,0.04)' } : hasMld ? { background: 'rgba(16,185,129,0.06)' } : {}}>
                       <td className="mono muted" style={{ fontSize: 12 }}>{l.sku}</td>
-                      <td style={{ maxWidth: 200 }}>
+                      <td style={{ maxWidth: 220 }}>
                         <div style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
+                        <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>{l.pack}</div>
                         {isOos && (
                           <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, whiteSpace: 'nowrap' }}>
                             ⚠ Out of stock — fulfilment not guaranteed
                           </div>
                         )}
                       </td>
-                      <td className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{l.pack}</td>
+                      {hasVariantLines && (
+                        <td style={{ minWidth: 130 }}>
+                          {l.variants?.length > 0 ? (
+                            <div ref={el => { if (el) variantRefs.current[l.sku] = el }}>
+                              <VariantSelect
+                                variants={l.variants}
+                                value={l.variant || ''}
+                                onChange={code => setVariant(l.sku, code)}
+                              />
+                            </div>
+                          ) : (
+                            <span className="muted" style={{ fontSize: 12 }}>—</span>
+                          )}
+                        </td>
+                      )}
                       <td style={{ whiteSpace: 'nowrap' }}><StockDot state={l.stockState} /></td>
                       <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
                       <td className="right" style={{ minWidth: 88 }}>
@@ -390,7 +442,7 @@ export default function QuickEntryPanel({
                             <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
                             <input
                               className="input"
-                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
+                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
                               value={displayUnit}
                               onChange={e => setEditingUnit(prev => ({ ...prev, [l.sku]: e.target.value }))}
                               onFocus={() => startEditUnit(l.sku, l.unit)}
@@ -398,10 +450,35 @@ export default function QuickEntryPanel({
                             />
                           </div>
                           {isBelowMsp && (
-                            <div style={{ fontSize: 10.5, color: '#dc2626', marginTop: 2, whiteSpace: 'nowrap' }}>
-                              Must be MSP or above
+                            <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
+                              Requires approval
                             </div>
                           )}
+                        </div>
+                      </td>
+                      <td className="right" style={{ minWidth: 80 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                          <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            placeholder="—"
+                            style={{ width: 52, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
+                            value={l.mld ?? ''}
+                            onChange={e => {
+                              const raw = e.target.value
+                              if (raw === '') { setMld(l.sku, ''); return }
+                              const v = parseFloat(raw)
+                              if (!isNaN(v) && v >= 0 && v <= 100) setMld(l.sku, raw)
+                            }}
+                            onBlur={e => {
+                              const v = parseFloat(e.target.value)
+                              if (!isNaN(v)) setMld(l.sku, (Math.round(v * 10) / 10).toString())
+                            }}
+                          />
+                          <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>%</span>
                         </div>
                       </td>
                       <td className="right" style={{ minWidth: 60 }}>
@@ -468,7 +545,7 @@ export default function QuickEntryPanel({
                     </tr>
                     {noteOpen && (
                       <tr key={l.sku + '-note'}>
-                        <td colSpan={8} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
+                        <td colSpan={hasVariantLines ? 9 : 8} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
                               <input

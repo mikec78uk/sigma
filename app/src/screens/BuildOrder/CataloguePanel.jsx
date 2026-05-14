@@ -1,10 +1,10 @@
-import { CATEGORIES } from '../../data'
 import { fmt } from '../../utils/format'
 import Icon from '../../components/Icon'
 import Pager from '../../components/Pager'
 import StockDot from '../../components/StockDot'
 
 export default function CataloguePanel({
+  catalogue = [], categories = [],
   q, setQ, cat, setCat,
   stockOnly, setStockOnly,
   dtOnly, setDtOnly,
@@ -33,7 +33,7 @@ export default function CataloguePanel({
           <button className="btn"><Icon name="filter" size={14} /> Advanced</button>
         </div>
         <div className="row gap-6" style={{ flexWrap: 'wrap' }}>
-          {CATEGORIES.map(c => (
+          {categories.map(c => (
             <button key={c} className={'chip ' + (cat === c ? 'active' : '')} onClick={() => setCat(c)}>{c}</button>
           ))}
           <div style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 4px' }} />

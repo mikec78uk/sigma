@@ -390,10 +390,10 @@ export default function OrdersLanding() {
                         <div className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{o.id}</div>
                       </td>
                       <td>
-                        <div><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{client?.code}</span>{client?.name}</div>
+                        <div><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{client?.code}</span>{client?.name}{client?.postcode && <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>({client.postcode})</span>}</div>
                       </td>
                       <td><span className="badge">Hospital</span></td>
-                      <td className="mono" style={{ fontSize: 12 }}>{o.placed}</td>
+                      <td className="mono" style={{ fontSize: 12 }}>{o.placed?.split(' ')[0]}</td>
                       <td className="mono muted" style={{ fontSize: 12 }}>{o.poNumber || <span style={{ color: 'var(--ink-4)' }}>—</span>}</td>
                       <td className="right tnum mono">{o.lines}</td>
                       <td className="right tnum mono" style={{ fontWeight: 600 }}>{fmt(o.total)}</td>

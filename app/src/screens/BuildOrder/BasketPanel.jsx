@@ -38,6 +38,10 @@ export default function BasketPanel({
 }) {
   const unitCount = lines.reduce((s, l) => s + l.qty, 0)
   const hasLines = lines.length > 0
+  const mldDiscount = lines.reduce((s, l) => {
+    const pct = parseFloat(l.mld)
+    return s + (isNaN(pct) || pct <= 0 ? 0 : l.unit * l.qty * pct / 100)
+  }, 0)
 
   return (
     <div className="panel">
@@ -77,6 +81,12 @@ export default function BasketPanel({
               <span className="muted" style={{ fontSize: 13 }}>Subtotal</span>
               <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(subtotal)}</span>
             </div>
+            {mldDiscount > 0 && (
+              <div className="row between" style={{ alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#059669' }}>MLD discount</span>
+                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(mldDiscount)}</span>
+              </div>
+            )}
             <div className="row between" style={{ alignItems: 'baseline' }}>
               <span className="muted" style={{ fontSize: 13 }}>VAT</span>
               <span className="muted" style={{ fontSize: 12 }}>Rated separately at invoice</span>

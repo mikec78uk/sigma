@@ -8,9 +8,8 @@ export const HOSPITAL_CLIENTS = [
 ]
 
 export const ORDER_TYPES = [
-  { id: 'hospital', title: 'Hospital',    desc: "Standard order against the customer's hospital pricing schedule.",                                  available: true  },
-  { id: 'bulk',     title: 'Bulk Order',  desc: 'Large-volume order with tiered pricing and extended lead time. Requires commercial pre-approval.',                              available: false },
-  { id: 'nrt',      title: 'NRT',         desc: 'Non-routine transfer (split shipments, manual allocations). Used for shortages and special handling.',                          available: false },
+  { id: 'hospital', title: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
+  { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', desc: 'Items dispatched from a dedicated depot.', available: true },
 ]
 
 export const SHIPPING_AGENTS = [
@@ -37,7 +36,7 @@ export const CATALOGUE = [
   { sku: 'SC-04341', name: 'Clarithromycin 500mg Tablets',             pack: '14 tabs',   form: 'TAB', category: 'Antibiotics',    msp: 3.62, promo: null, unit: 3.62, stock: 0,     stockState: 'out', dt: false, controlled: false },
   { sku: 'SC-05010', name: 'Ramipril 5mg Capsules',                    pack: '28 caps',   form: 'CAP', category: 'Cardiovascular', msp: 1.18, promo: null, unit: 1.18, stock: 9120,  stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-05011', name: 'Ramipril 10mg Capsules',                   pack: '28 caps',   form: 'CAP', category: 'Cardiovascular', msp: 1.36, promo: 1.21, unit: 1.21, stock: 7440,  stockState: 'ok',  dt: true,  controlled: false },
-  { sku: 'SC-05123', name: 'Atorvastatin 40mg Film-coated Tablets',    pack: '28 tabs',   form: 'TAB', category: 'Cardiovascular', msp: 1.96, promo: null, unit: 1.96, stock: 11200, stockState: 'ok',  dt: true,  controlled: false },
+  { sku: 'SC-05123', name: 'Atorvastatin 40mg Film-coated Tablets',    pack: '28 tabs',   form: 'TAB', category: 'Cardiovascular', msp: 1.96, promo: null, unit: 1.96, stock: 11200, stockState: 'ok',  dt: true,  controlled: false, variants: [{ code: 'ATORV-ACT', description: 'Atorvastatin 40mg Film-coated Tablets — Actavis', priority: 1 }, { code: 'ATORV-TEV', description: 'Atorvastatin 40mg Tablets — Teva', priority: 0 }, { code: 'ATORV-SAN', description: 'Atorvastatin 40mg Film-coated Tablets — Sandoz', priority: 0 }] },
   { sku: 'SC-05124', name: 'Atorvastatin 80mg Film-coated Tablets',    pack: '28 tabs',   form: 'TAB', category: 'Cardiovascular', msp: 2.42, promo: null, unit: 2.42, stock: 240,   stockState: 'low', dt: true,  controlled: false },
   { sku: 'SC-06502', name: 'Salbutamol 100mcg CFC-free Inhaler',       pack: '200 dose',  form: 'INH', category: 'Respiratory',    msp: 1.48, promo: null, unit: 1.48, stock: 2680,  stockState: 'ok',  dt: false, controlled: false },
   { sku: 'SC-06503', name: 'Salbutamol 2.5mg/2.5ml Nebuliser Solution',pack: '20x2.5ml', form: 'NEB', category: 'Respiratory',    msp: 3.10, promo: null, unit: 3.10, stock: 96,    stockState: 'low', dt: true,  controlled: false },
@@ -45,20 +44,86 @@ export const CATALOGUE = [
   { sku: 'SC-07811', name: 'Paracetamol 500mg Tablets',                pack: '100 tabs',  form: 'TAB', category: 'Analgesics',     msp: 0.94, promo: 0.81, unit: 0.81, stock: 18450, stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-07815', name: 'Paracetamol 120mg/5ml Oral Suspension',    pack: '100ml',     form: 'SUS', category: 'Analgesics',     msp: 1.12, promo: null, unit: 1.12, stock: 3210,  stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-07920', name: 'Ibuprofen 400mg Tablets',                  pack: '84 tabs',   form: 'TAB', category: 'Analgesics',     msp: 1.78, promo: null, unit: 1.78, stock: 6420,  stockState: 'ok',  dt: true,  controlled: false },
-  { sku: 'SC-07925', name: 'Codeine Phosphate 30mg Tablets',           pack: '100 tabs',  form: 'TAB', category: 'Analgesics',     msp: 5.21, promo: null, unit: 5.21, stock: 412,   stockState: 'ok',  dt: true,  controlled: true  },
+  { sku: 'SC-07925', name: 'Codeine Phosphate 30mg Tablets',           pack: '100 tabs',  form: 'TAB', category: 'Analgesics',     msp: 5.21, promo: null, unit: 5.21, stock: 412,   stockState: 'ok',  dt: true,  controlled: true,  exportRestricted: true },
   { sku: 'SC-08402', name: 'Omeprazole 20mg Gastro-Resistant Capsules',pack: '28 caps',   form: 'CAP', category: 'Gastro',         msp: 1.04, promo: null, unit: 1.04, stock: 8900,  stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-08404', name: 'Lansoprazole 30mg Capsules',               pack: '28 caps',   form: 'CAP', category: 'Gastro',         msp: 1.18, promo: null, unit: 1.18, stock: 5640,  stockState: 'ok',  dt: true,  controlled: false },
-  { sku: 'SC-08612', name: 'Metformin 500mg Tablets',                  pack: '84 tabs',   form: 'TAB', category: 'Diabetes',       msp: 1.32, promo: null, unit: 1.32, stock: 12340, stockState: 'ok',  dt: true,  controlled: false },
+  { sku: 'SC-08612', name: 'Metformin 500mg Tablets',                  pack: '84 tabs',   form: 'TAB', category: 'Diabetes',       msp: 1.32, promo: null, unit: 1.32, stock: 12340, stockState: 'ok',  dt: true,  controlled: false, variants: [{ code: 'METF-BRI', description: 'Metformin 500mg Tablets — Bristol Labs', priority: 1 }, { code: 'METF-WAR', description: 'Metformin 500mg Tablets — Warnex', priority: 0 }, { code: 'METF-MOR', description: 'Metformin 500mg Tablets — Morningside', priority: 0 }] },
   { sku: 'SC-08613', name: 'Metformin 1000mg Tablets',                 pack: '56 tabs',   form: 'TAB', category: 'Diabetes',       msp: 1.46, promo: 1.31, unit: 1.31, stock: 88,    stockState: 'low', dt: true,  controlled: false },
   { sku: 'SC-09201', name: 'Levothyroxine 100mcg Tablets',             pack: '28 tabs',   form: 'TAB', category: 'Endocrine',      msp: 0.92, promo: null, unit: 0.92, stock: 14210, stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-09502', name: 'Sertraline 50mg Tablets',                  pack: '28 tabs',   form: 'TAB', category: 'CNS',            msp: 1.24, promo: null, unit: 1.24, stock: 7280,  stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-09506', name: 'Citalopram 20mg Tablets',                  pack: '28 tabs',   form: 'TAB', category: 'CNS',            msp: 1.08, promo: null, unit: 1.08, stock: 0,     stockState: 'out', dt: false, controlled: false },
-  { sku: 'SC-09611', name: 'Diazepam 5mg Tablets',                     pack: '28 tabs',   form: 'TAB', category: 'CNS',            msp: 1.96, promo: null, unit: 1.96, stock: 320,   stockState: 'ok',  dt: true,  controlled: true  },
+  { sku: 'SC-09611', name: 'Diazepam 5mg Tablets',                     pack: '28 tabs',   form: 'TAB', category: 'CNS',            msp: 1.96, promo: null, unit: 1.96, stock: 320,   stockState: 'ok',  dt: true,  controlled: true,  exportRestricted: true },
   { sku: 'SC-10220', name: 'Furosemide 40mg Tablets',                  pack: '28 tabs',   form: 'TAB', category: 'Diuretic',       msp: 0.88, promo: null, unit: 0.88, stock: 5210,  stockState: 'ok',  dt: true,  controlled: false },
   { sku: 'SC-10412', name: 'Bisoprolol 5mg Tablets',                   pack: '28 tabs',   form: 'TAB', category: 'Cardiovascular', msp: 0.96, promo: null, unit: 0.96, stock: 6420,  stockState: 'ok',  dt: true,  controlled: false },
 ]
 
 export const CATEGORIES = ['All', 'Antibiotics', 'Cardiovascular', 'Respiratory', 'Analgesics', 'Gastro', 'Diabetes', 'Endocrine', 'CNS', 'Diuretic']
+
+export const NRT_CATEGORIES = ['All', 'Patches', 'Gum', 'Lozenges', 'Inhalator', 'Spray', 'Microtab']
+
+export const NRT_CATALOGUE = [
+  // Patches (12)
+  { sku: 'NC-10001', name: 'Nicorette Invisipatch 25mg/16hr Patch Step 1',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 8.50,  promo: null,  unit: 8.50,  stock: 2400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10002', name: 'Nicorette Invisipatch 15mg/16hr Patch Step 2',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 7.20,  promo: null,  unit: 7.20,  stock: 1840, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10003', name: 'Nicorette Invisipatch 10mg/16hr Patch Step 3',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 6.80,  promo: null,  unit: 6.80,  stock: 1620, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10004', name: 'NiQuitin Clear 21mg/24hr Patch Step 1',         pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 9.10,  promo: null,  unit: 9.10,  stock: 980,  stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10005', name: 'NiQuitin Clear 14mg/24hr Patch Step 2',         pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 8.40,  promo: null,  unit: 8.40,  stock: 760,  stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10006', name: 'NiQuitin Clear 7mg/24hr Patch Step 3',          pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 7.90,  promo: null,  unit: 7.90,  stock: 540,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-10007', name: 'Nicotinell TTS30 21mg/24hr Patch',              pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 8.80,  promo: null,  unit: 8.80,  stock: 1120, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10008', name: 'Nicotinell TTS20 14mg/24hr Patch',              pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 7.60,  promo: null,  unit: 7.60,  stock: 880,  stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10009', name: 'Nicotinell TTS10 7mg/24hr Patch',               pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 6.90,  promo: null,  unit: 6.90,  stock: 640,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-10010', name: 'Generic Nicotine 21mg/24hr Patch',              pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 5.20,  promo: 4.68,  unit: 4.68,  stock: 3200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10011', name: 'Generic Nicotine 14mg/24hr Patch',              pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 4.80,  promo: null,  unit: 4.80,  stock: 2800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10012', name: 'Generic Nicotine 7mg/24hr Patch',               pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 4.20,  promo: null,  unit: 4.20,  stock: 2400, stockState: 'ok',  dt: false, controlled: false },
+  // Gum (14)
+  { sku: 'NC-20001', name: 'Nicorette 2mg Original Gum',                    pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.40,  promo: null,  unit: 3.40,  stock: 4200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20002', name: 'Nicorette 4mg Original Gum',                    pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.80,  promo: null,  unit: 3.80,  stock: 3800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20003', name: 'Nicorette 2mg Freshmint Gum',                   pack: '105 pieces',   form: 'GUM', category: 'Gum',       msp: 10.80, promo: 9.72,  unit: 9.72,  stock: 1640, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20004', name: 'Nicorette 4mg Freshmint Gum',                   pack: '105 pieces',   form: 'GUM', category: 'Gum',       msp: 11.40, promo: null,  unit: 11.40, stock: 1420, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20005', name: 'Nicorette 2mg Fruit Gum',                       pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.40,  promo: null,  unit: 3.40,  stock: 2600, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20006', name: 'Nicorette 4mg Fruit Gum',                       pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.80,  promo: null,  unit: 3.80,  stock: 2200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20007', name: 'NiQuitin 2mg Freshmint Gum',                    pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.20,  promo: null,  unit: 3.20,  stock: 1800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20008', name: 'NiQuitin 4mg Freshmint Gum',                    pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.60,  promo: null,  unit: 3.60,  stock: 1600, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20009', name: 'Nicotinell 2mg Freshmint Gum',                  pack: '96 pieces',    form: 'GUM', category: 'Gum',       msp: 8.90,  promo: null,  unit: 8.90,  stock: 1200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20010', name: 'Nicotinell 4mg Freshmint Gum',                  pack: '96 pieces',    form: 'GUM', category: 'Gum',       msp: 9.40,  promo: null,  unit: 9.40,  stock: 980,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-20011', name: 'Generic Nicotine 2mg Gum',                      pack: '105 pieces',   form: 'GUM', category: 'Gum',       msp: 6.20,  promo: 5.58,  unit: 5.58,  stock: 5200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20012', name: 'Generic Nicotine 4mg Gum',                      pack: '105 pieces',   form: 'GUM', category: 'Gum',       msp: 6.80,  promo: null,  unit: 6.80,  stock: 4800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20013', name: 'Nicorette 4mg Icy White Gum',                   pack: '30 pieces',    form: 'GUM', category: 'Gum',       msp: 3.80,  promo: null,  unit: 3.80,  stock: 1400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-20014', name: 'Nicotinell Fruit & Mint 2mg Gum',               pack: '96 pieces',    form: 'GUM', category: 'Gum',       msp: 8.90,  promo: null,  unit: 8.90,  stock: 840,  stockState: 'low', dt: false, controlled: false },
+  // Lozenges (10)
+  { sku: 'NC-30001', name: 'Nicorette 1.5mg Mint Lozenge',                  pack: '20 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 3.60,  promo: null,  unit: 3.60,  stock: 3200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30002', name: 'Nicorette 4mg Mint Lozenge',                    pack: '20 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 4.10,  promo: null,  unit: 4.10,  stock: 2800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30003', name: 'NiQuitin 1.5mg Mini Mint Lozenge',              pack: '20 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 3.40,  promo: null,  unit: 3.40,  stock: 2400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30004', name: 'NiQuitin 2mg Mini Mint Lozenge',                pack: '20 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 3.20,  promo: null,  unit: 3.20,  stock: 2100, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30005', name: 'NiQuitin 4mg Mini Mint Lozenge',                pack: '20 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 3.80,  promo: null,  unit: 3.80,  stock: 1800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30006', name: 'Nicotinell 1mg Mint Lozenge',                   pack: '36 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 4.20,  promo: null,  unit: 4.20,  stock: 1400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30007', name: 'Generic Nicotine 2mg Lozenge',                  pack: '36 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 2.40,  promo: null,  unit: 2.40,  stock: 4600, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30008', name: 'Generic Nicotine 4mg Lozenge',                  pack: '36 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 2.80,  promo: null,  unit: 2.80,  stock: 4200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-30009', name: 'NiQuitin 4mg Mini Lozenge Bulk',                pack: '100 lozenges', form: 'LOZ', category: 'Lozenges',  msp: 14.80, promo: null,  unit: 14.80, stock: 640,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-30010', name: 'Generic Nicotine 4mg Lozenge Bulk',             pack: '96 lozenges',  form: 'LOZ', category: 'Lozenges',  msp: 6.80,  promo: null,  unit: 6.80,  stock: 0,    stockState: 'out', dt: false, controlled: false },
+  // Inhalator (6)
+  { sku: 'NC-40001', name: 'Nicorette Inhalator 10mg Cartridges',           pack: '4 cartridges', form: 'INH', category: 'Inhalator', msp: 5.20,  promo: null,  unit: 5.20,  stock: 1800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-40002', name: 'Nicorette Inhalator 10mg Cartridges',           pack: '20 cartridges',form: 'INH', category: 'Inhalator', msp: 18.90, promo: null,  unit: 18.90, stock: 1200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-40003', name: 'Nicorette Inhalator 15mg Cartridges',           pack: '4 cartridges', form: 'INH', category: 'Inhalator', msp: 5.80,  promo: null,  unit: 5.80,  stock: 1400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-40004', name: 'Nicorette Inhalator 15mg Cartridges',           pack: '20 cartridges',form: 'INH', category: 'Inhalator', msp: 21.40, promo: null,  unit: 21.40, stock: 840,  stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-40005', name: 'Nicorette Inhalator Starter Kit 15mg',          pack: '1 kit',        form: 'INH', category: 'Inhalator', msp: 24.80, promo: null,  unit: 24.80, stock: 480,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-40006', name: 'Generic Nicotine Inhalator 15mg',               pack: '20 cartridges',form: 'INH', category: 'Inhalator', msp: 14.60, promo: 13.14, unit: 13.14, stock: 640,  stockState: 'ok',  dt: false, controlled: false },
+  // Spray (9)
+  { sku: 'NC-50001', name: 'Nicorette QuickMist 1mg Mouth Spray',           pack: '150 doses',    form: 'SPR', category: 'Spray',     msp: 10.80, promo: null,  unit: 10.80, stock: 2200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50002', name: 'Nicorette QuickMist Cool Berry 1mg Spray',      pack: '150 doses',    form: 'SPR', category: 'Spray',     msp: 10.80, promo: null,  unit: 10.80, stock: 1800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50003', name: 'Nicorette QuickMist Duo 1mg Spray',             pack: '2×150 doses',  form: 'SPR', category: 'Spray',     msp: 19.60, promo: 17.64, unit: 17.64, stock: 1200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50004', name: 'Nicorette Nasal Spray 500mcg/dose',             pack: '200 doses',    form: 'SPR', category: 'Spray',     msp: 12.40, promo: null,  unit: 12.40, stock: 640,  stockState: 'low', dt: false, controlled: false },
+  { sku: 'NC-50005', name: 'NiQuitin Mouth Spray 1mg',                      pack: '150 doses',    form: 'SPR', category: 'Spray',     msp: 10.40, promo: null,  unit: 10.40, stock: 1600, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50006', name: 'Nicotinell Mouth Spray 1mg',                    pack: '150 doses',    form: 'SPR', category: 'Spray',     msp: 10.60, promo: null,  unit: 10.60, stock: 1200, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50007', name: 'Generic Nicotine Mouth Spray 1mg',              pack: '150 doses',    form: 'SPR', category: 'Spray',     msp: 7.80,  promo: null,  unit: 7.80,  stock: 2800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-50008', name: 'Nicorette Nasal Spray 500mcg Refill',           pack: '200 doses',    form: 'SPR', category: 'Spray',     msp: 11.80, promo: null,  unit: 11.80, stock: 0,    stockState: 'out', dt: false, controlled: false },
+  { sku: 'NC-50009', name: 'NiQuitin Spray Duo Pack 1mg',                   pack: '2×150 doses',  form: 'SPR', category: 'Spray',     msp: 19.20, promo: null,  unit: 19.20, stock: 480,  stockState: 'low', dt: false, controlled: false },
+  // Microtab (4)
+  { sku: 'NC-60001', name: 'Nicorette Microtab 2mg Sublingual Tablets',     pack: '100 tablets',  form: 'TAB', category: 'Microtab',  msp: 8.60,  promo: null,  unit: 8.60,  stock: 1800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-60002', name: 'Nicorette Microtab 2mg Sublingual Tablets',     pack: '40 tablets',   form: 'TAB', category: 'Microtab',  msp: 3.80,  promo: null,  unit: 3.80,  stock: 2400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-60003', name: 'Generic Nicotine 2mg Sublingual Tablets',       pack: '100 tablets',  form: 'TAB', category: 'Microtab',  msp: 5.40,  promo: null,  unit: 5.40,  stock: 2800, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-60004', name: 'NiQuitin Strips 2.5mg',                         pack: '14 strips',    form: 'STR', category: 'Microtab',  msp: 4.80,  promo: null,  unit: 4.80,  stock: 960,  stockState: 'ok',  dt: false, controlled: false },
+]
 
 export const ORDERS_SEED = [
   { id: 'SO-2026-04425', ref: 'Respiratory stock top-up',           clientId: 'NCH-220', type: 'hospital', status: 'pending-approval', placed: '2026-05-12 10:14', lines: 7,  total: 1840.20, agent: 'DPDP-NXT',  poNumber: 'PO-2026-00848', shipDate: '2026-05-16', note: null },

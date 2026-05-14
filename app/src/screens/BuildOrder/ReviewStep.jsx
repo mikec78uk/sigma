@@ -17,7 +17,8 @@ export default function ReviewStep({ order, client, onBack, onSubmit }) {
         <div className="panel__head"><h3>Review &amp; submit</h3></div>
         <div className="panel__body">
           <div className="row gap-24" style={{ flexWrap: 'wrap' }}>
-            <ReviewKV label="Client"         value={`${client?.name} (${client?.code})`} />
+            <ReviewKV label="Client ID"      value={client?.code} />
+            <ReviewKV label="Client"         value={`${client?.name}${client?.postcode ? ` (${client.postcode})` : ''}`} />
             <ReviewKV label="Order type"     value="Hospital" />
             <ReviewKV label="Shipping agent" value={order.agent || '—'} />
             <ReviewKV label="Lines / units"  value={`${order.lines.length} / ${order.lines.reduce((s, l) => s + l.qty, 0)}`} />

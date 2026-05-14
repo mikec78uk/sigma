@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { CATALOGUE } from '../../data'
 import { fmt } from '../../utils/format'
 import Modal from '../../components/Modal'
 import Icon from '../../components/Icon'
@@ -32,7 +31,7 @@ function parseCSV(text) {
   return { rows, error: null }
 }
 
-export default function SpreadsheetImportModal({ onImport, onClose, initialFile }) {
+export default function SpreadsheetImportModal({ catalogue = [], onImport, onClose, initialFile }) {
   const [step, setStep] = useState('upload') // 'upload' | 'preview'
   const [fileName, setFileName] = useState('')
   const [parseError, setParseError] = useState(null)
@@ -60,11 +59,11 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
       const unmatchedRows = []
       const oosRows = []
       rows.forEach(r => {
-        const product = CATALOGUE.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
+        const product = catalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
         if (!product) {
           unmatchedRows.push(r)
-        } else if (product.stockState === 'out') {
-          oosRows.push({ ...r, product })
+        } else if (product.stockState === 'out' || product.stock < r.qty) {
+          oosRows.push({ ...r, product, available: product.stock })
         } else {
           matchedRows.push({ ...r, product })
         }
@@ -84,6 +83,17 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
     e.preventDefault()
     setDragging(false)
     processFile(e.dataTransfer.files[0])
+  }
+
+  function downloadTemplate() {
+    // SC-04128 & SC-07811: in stock (matched)
+    // SC-04341: stock=0 → 0 available
+    // SC-04219: stock=38, requesting 100 → insufficient
+    const csv = 'SKU,Product Name,Qty\nSC-04128,Amoxicillin 250mg/5ml Oral Suspension,10\nSC-07811,Paracetamol 500mg Tablets,20\nSC-04341,Clarithromycin 500mg Tablets,10\nSC-04219,Co-amoxiclav 625mg Tablets,100\n'
+    const a = document.createElement('a')
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+    a.download = 'sigma-order-template.csv'
+    a.click()
   }
 
   function handleConfirm() {
@@ -150,8 +160,17 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
                   <tr><td className="mono">SC-04227</td><td>Amoxicillin 500mg Caps</td><td className="mono">4</td></tr>
                 </tbody>
               </table>
-              <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                Column headers are flexible — any column containing "SKU", "Code", "Qty" or "Quantity" will be detected automatically.
+              <div className="row between" style={{ alignItems: 'center', marginTop: 10 }}>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  Column headers are flexible — any column containing "SKU", "Code", "Qty" or "Quantity" will be detected automatically.
+                </div>
+                <button
+                  className="btn btn--sm btn--ghost"
+                  onClick={downloadTemplate}
+                  style={{ fontSize: 12, color: 'var(--ink-3)', gap: 5, flexShrink: 0, marginLeft: 12 }}
+                >
+                  <Icon name="download" size={12} /> Download example file
+                </button>
               </div>
             </div>
           </div>
@@ -168,7 +187,7 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
               {outOfStock.length > 0 && (
                 <div style={{ flex: 1, background: '#fff5f5', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '12px 14px' }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: '#991b1b' }}>{outOfStock.length}</div>
-                  <div style={{ fontSize: 13, color: '#991b1b', marginTop: 2 }}>out of stock</div>
+                  <div style={{ fontSize: 13, color: '#991b1b', marginTop: 2 }}>insufficient stock</div>
                 </div>
               )}
               {unmatched.length > 0 && (
@@ -182,7 +201,7 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
             {/* Out of stock lines */}
             {outOfStock.length > 0 && (
               <div>
-                <div className="label" style={{ marginBottom: 8 }}>Out of stock — will not be added</div>
+                <div className="label" style={{ marginBottom: 8 }}>Insufficient stock — will not be added</div>
                 <div style={{ border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, overflow: 'hidden', background: '#fff5f5' }}>
                   <table className="tbl">
                     <thead>
@@ -190,7 +209,8 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
                         <th style={{ width: 48 }}>Row</th>
                         <th style={{ textAlign: 'left' }}>SKU</th>
                         <th>Product</th>
-                        <th className="right">Qty</th>
+                        <th className="right">Requested</th>
+                        <th className="right">Available</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -202,13 +222,14 @@ export default function SpreadsheetImportModal({ onImport, onClose, initialFile 
                             <div style={{ fontSize: 13, color: '#991b1b' }}>{r.product.name}</div>
                           </td>
                           <td className="right mono tnum" style={{ color: '#991b1b' }}>{r.qty}</td>
+                          <td className="right mono tnum" style={{ color: r.available === 0 ? '#991b1b' : '#92400e', fontWeight: 600 }}>{r.available}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div style={{ fontSize: 12, color: '#991b1b', marginTop: 6, opacity: 0.8 }}>
-                  These products are currently out of stock and cannot be fulfilled.
+                  These products have insufficient stock and cannot be fulfilled at the requested quantity.
                 </div>
               </div>
             )}
