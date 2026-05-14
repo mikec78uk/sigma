@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useMatch, useLocation } from 'react-router-dom'
-import { ORDERS_SEED, HOSPITAL_CLIENTS, CATALOGUE } from '../../data'
+import { ORDERS_SEED, HOSPITAL_CLIENTS, CATALOGUE, NRT_CATALOGUE } from '../../data'
 import { fmt } from '../../utils/format'
 import Icon from '../../components/Icon'
 import Pager from '../../components/Pager'
@@ -216,7 +216,8 @@ export default function OrdersLanding() {
 
   function buildOrderState(o) {
     if (o.status === 'draft') {
-      const seedLines = CATALOGUE.slice(0, Math.min(o.lines, 4)).map((p, i) => ({
+      const draftCatalogue = o.type === 'nrt' ? NRT_CATALOGUE : CATALOGUE
+      const seedLines = draftCatalogue.slice(0, Math.min(o.lines, 4)).map((p, i) => ({
         sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
         unit: p.promo ?? p.msp, qty: Math.max(1, (i + 1) * 2),
         description: '', stock: p.stock, stockState: p.stockState,
@@ -225,10 +226,13 @@ export default function OrdersLanding() {
       return { isDraft: true, order: { draftId: o.id, clientId: o.clientId, type: o.type, status: 'draft', lines: seedLines, description: o.ref, agent: 'DPDP-NXT', manualPick: { enabled: false, reasonCode: '', note: '' } } }
     } else {
       const sampleNotes = ['Earliest expiry date required', 'Short-dated stock acceptable', null, null, null, null, null, null]
-      const priority = ['SC-04128', 'SC-07811', 'SC-05010', 'SC-05011', 'SC-05123', 'SC-06502', 'SC-08612', 'SC-07815']
+      const submittedCatalogue = o.type === 'nrt' ? NRT_CATALOGUE : CATALOGUE
+      const priority = o.type === 'nrt'
+        ? ['NC-10010', 'NC-10003', 'NC-20003', 'NC-20011', 'NC-30002', 'NC-40006', 'NC-50003', 'NC-60001']
+        : ['SC-04128', 'SC-07811', 'SC-05010', 'SC-05011', 'SC-05123', 'SC-06502', 'SC-08612', 'SC-07815']
       const skus = priority.slice(0, Math.min(o.lines, 8))
       const seedLines = skus.map((sku, i) => {
-        const p = CATALOGUE.find(c => c.sku === sku) || CATALOGUE[i]
+        const p = submittedCatalogue.find(c => c.sku === sku) || submittedCatalogue[i]
         const overrides = SEED_OVERRIDES[p.sku] || {}
         return {
           sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
@@ -398,7 +402,11 @@ export default function OrdersLanding() {
                       <td>
                         <div><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{client?.code}</span>{client?.name}{client?.postcode && <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>({client.postcode})</span>}</div>
                       </td>
-                      <td><span className="badge">Hospital</span></td>
+                      <td>
+                        <span className="badge" style={o.type === 'nrt' ? { background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' } : {}}>
+                          {o.type === 'nrt' ? 'NRT' : 'Hospital'}
+                        </span>
+                      </td>
                       <td className="mono" style={{ fontSize: 12 }}>{o.placed?.split(' ')[0]}</td>
                       <td className="mono muted" style={{ fontSize: 12 }}>{o.poNumber || <span style={{ color: 'var(--ink-4)' }}>—</span>}</td>
                       <td className="right tnum mono">{o.lines}</td>
