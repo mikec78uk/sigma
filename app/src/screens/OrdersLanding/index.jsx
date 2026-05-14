@@ -294,7 +294,7 @@ export default function OrdersLanding() {
           <SearchSelect
             value={clientFilter}
             onChange={v => { setClientFilter(v); setTab('all'); setPage(1) }}
-            options={HOSPITAL_CLIENTS.map(c => ({ value: c.id, label: c.name, meta: c.code }))}
+            options={HOSPITAL_CLIENTS.map(c => ({ value: c.id, label: c.name, meta: c.code, sub: c.postcode }))}
             allLabel="All clients"
             width={300}
           />

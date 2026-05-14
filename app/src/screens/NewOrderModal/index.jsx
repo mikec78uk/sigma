@@ -15,7 +15,8 @@ export default function NewOrderModal() {
   const clients = HOSPITAL_CLIENTS.filter(c =>
     !q.trim() ||
     c.name.toLowerCase().includes(q.toLowerCase()) ||
-    c.code.toLowerCase().includes(q.toLowerCase())
+    c.code.toLowerCase().includes(q.toLowerCase()) ||
+    (c.postcode || '').toLowerCase().includes(q.toLowerCase())
   )
 
   const canContinue = clientId && type
@@ -96,6 +97,7 @@ export default function NewOrderModal() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500 }}><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{c.code}</span>{c.name}</div>
+                    {c.postcode && <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{c.postcode}</div>}
                   </div>
                   {clientId === c.id && <Icon name="check" size={18} style={{ color: 'var(--ink)' }} />}
                 </div>

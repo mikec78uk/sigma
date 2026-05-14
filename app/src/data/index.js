@@ -1,10 +1,10 @@
 export const HOSPITAL_CLIENTS = [
-  { id: 'BHA-001', name: 'Birmingham Heartlands Hospital',     code: 'BHA-001', region: 'West Midlands',    group: 'University Hospitals Birmingham NHS Trust', terms: '30 days' },
-  { id: 'RGT-104', name: 'Royal Glasgow Trust',                code: 'RGT-104', region: 'Greater Glasgow',  group: 'NHS Greater Glasgow & Clyde',               terms: '30 days' },
-  { id: 'NCH-220', name: 'Northwick Park Pharmacy',            code: 'NCH-220', region: 'London NW',        group: 'London North West Healthcare',              terms: '45 days' },
-  { id: 'LST-318', name: "Leeds St James's University Hospital",code: 'LST-318', region: 'Yorkshire',       group: 'Leeds Teaching Hospitals',                  terms: '30 days' },
-  { id: 'MAN-411', name: 'Manchester Royal Infirmary',         code: 'MAN-411', region: 'Greater Manchester',group: 'Manchester University NHS FT',              terms: '30 days' },
-  { id: 'BRI-509', name: 'Bristol Southmead Hospital',         code: 'BRI-509', region: 'South West',       group: 'North Bristol NHS Trust',                   terms: '30 days' },
+  { id: 'BHA-001', name: 'Birmingham Heartlands Hospital',     code: 'BHA-001', postcode: 'B9 5SS',   region: 'West Midlands',     group: 'University Hospitals Birmingham NHS Trust', terms: '30 days' },
+  { id: 'RGT-104', name: 'Royal Glasgow Trust',                code: 'RGT-104', postcode: 'G4 0SF',   region: 'Greater Glasgow',   group: 'NHS Greater Glasgow & Clyde',               terms: '30 days' },
+  { id: 'NCH-220', name: 'Northwick Park Pharmacy',            code: 'NCH-220', postcode: 'HA1 3UJ',  region: 'London NW',         group: 'London North West Healthcare',              terms: '45 days' },
+  { id: 'LST-318', name: "Leeds St James's University Hospital",code: 'LST-318', postcode: 'LS9 7TF', region: 'Yorkshire',         group: 'Leeds Teaching Hospitals',                  terms: '30 days' },
+  { id: 'MAN-411', name: 'Manchester Royal Infirmary',         code: 'MAN-411', postcode: 'M13 9WL',  region: 'Greater Manchester', group: 'Manchester University NHS FT',             terms: '30 days' },
+  { id: 'BRI-509', name: 'Bristol Southmead Hospital',         code: 'BRI-509', postcode: 'BS10 5NB', region: 'South West',        group: 'North Bristol NHS Trust',                   terms: '30 days' },
 ]
 
 export const ORDER_TYPES = [
