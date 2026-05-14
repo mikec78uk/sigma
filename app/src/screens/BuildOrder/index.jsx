@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { HOSPITAL_CLIENTS, CATALOGUE, NRT_CATALOGUE, NRT_CATEGORIES, CATEGORIES } from '../../data'
 import { fmt } from '../../utils/format'
@@ -20,6 +20,9 @@ export default function BuildOrder() {
   const [unmatchedImport, setUnmatchedImport] = useState([])
   const [oosImport, setOosImport] = useState([])
   const [insufficientImport, setInsufficientImport] = useState([])
+  const [wrongRouteImport, setWrongRouteImport] = useState([])
+  const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false)
+  const pendingNavRef = useRef(null)
 
   function processFileQuick(file) {
     const reader = new FileReader()
@@ -35,15 +38,19 @@ export default function BuildOrder() {
         const cols = line.split(',').map(c => c.trim().replace(/"/g, ''))
         return { sku: cols[skuCol] || '', qty: Math.max(0, parseInt(cols[qtyCol], 10) || 0), row: i + 2 }
       }).filter(r => r.sku && r.qty > 0)
-      const matched = [], unmatched = [], oos = [], insufficient = []
+      const matched = [], unmatched = [], oos = [], insufficient = [], wrongRoute = []
+      const otherCatalogue = isNrt ? CATALOGUE : NRT_CATALOGUE
       parsed.forEach(r => {
         const product = activeCatalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
-        if (!product) unmatched.push(r)
-        else if (product.stockState === 'out') oos.push({ ...r, product, available: 0 })
+        if (!product) {
+          const otherProduct = otherCatalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
+          if (otherProduct) wrongRoute.push({ ...r, product: otherProduct })
+          else unmatched.push(r)
+        } else if (product.stockState === 'out') oos.push({ ...r, product, available: 0 })
         else if (product.stock < r.qty) insufficient.push({ ...r, product, available: product.stock })
         else matched.push({ product, qty: r.qty })
       })
-      handleImportQuick(matched, unmatched, oos, insufficient)
+      handleImportQuick(matched, unmatched, oos, insufficient, wrongRoute)
     }
     reader.readAsText(file)
   }
@@ -83,6 +90,32 @@ export default function BuildOrder() {
   const isNrt = order?.type === 'nrt'
   const activeCatalogue = isNrt ? NRT_CATALOGUE : CATALOGUE
   const activeCategories = isNrt ? NRT_CATEGORIES : CATEGORIES
+
+  // When the same component instance is reused for a different order (e.g. switching route type),
+  // reset all state to match the incoming order so stale banners and lines don't bleed through.
+  const prevDraftIdRef = useRef(order?.draftId)
+  useEffect(() => {
+    if (order?.draftId && order.draftId !== prevDraftIdRef.current) {
+      prevDraftIdRef.current = order.draftId
+      const catalogue = order.type === 'nrt' ? NRT_CATALOGUE : CATALOGUE
+      const newLines = (order.lines || []).filter(l => {
+        const current = catalogue.find(p => p.sku === l.sku)
+        return (current?.stockState ?? l.stockState) !== 'out'
+      })
+      setLines(newLines)
+      setOrderDesc(order.description || '')
+      setPoNumber(order.poNumber || '')
+      setShipDate(order.shipDate || new Date().toISOString().slice(0, 10))
+      setAgent(order.agent || 'DPDP-NXT')
+      setManualPick(order.manualPick || { enabled: false, reasonCode: '', note: '' })
+      setOosImport([])
+      setInsufficientImport([])
+      setUnmatchedImport([])
+      setWrongRouteImport([])
+      setDraftOosRemoved([])
+      setStep('build')
+    }
+  }, [order?.draftId])
 
   useEffect(() => {
     if (layout === 'split' || layout === 'quick') setStep('build')
@@ -186,9 +219,10 @@ export default function BuildOrder() {
     setOosImport([])
     setInsufficientImport([])
     setUnmatchedImport([])
+    setWrongRouteImport([])
   }
 
-  function handleImportQuick(importedLines, importedUnmatched = [], importedOos = [], importedInsufficient = []) {
+  function handleImportQuick(importedLines, importedUnmatched = [], importedOos = [], importedInsufficient = [], importedWrongRoute = []) {
     setLines(prev => {
       const next = [...prev]
       importedLines.forEach(({ product: p, qty }) => {
@@ -205,6 +239,35 @@ export default function BuildOrder() {
     if (importedUnmatched.length > 0) setUnmatchedImport(importedUnmatched)
     if (importedOos.length > 0) setOosImport(importedOos)
     if (importedInsufficient.length > 0) setInsufficientImport(importedInsufficient)
+    if (importedWrongRoute.length > 0) setWrongRouteImport(importedWrongRoute)
+  }
+
+  function startOtherOrder(wrongRouteItems) {
+    const otherType = isNrt ? 'hospital' : 'nrt'
+    const newDraftId = 'DR-2026-00' + Math.floor(300 + Math.random() * 99)
+    pendingNavRef.current = () => {
+      navigate(`/orders/${newDraftId}/build`, {
+        state: {
+          order: {
+            draftId: newDraftId,
+            clientId: order?.clientId,
+            type: otherType,
+            status: 'draft',
+            lines: (wrongRouteItems || []).map(r => ({
+              sku: r.product.sku, name: r.product.name, pack: r.product.pack,
+              msp: r.product.msp, promo: r.product.promo,
+              unit: r.product.promo ?? r.product.msp,
+              qty: r.qty, description: '', stock: r.product.stock,
+              stockState: r.product.stockState,
+              variants: r.product.variants || null, variant: '', mld: '',
+            })),
+            description: '', agent: 'DPDP-NXT',
+            manualPick: { enabled: false, reasonCode: '', note: '' },
+          },
+        },
+      })
+    }
+    setShowSaveDraftPrompt(true)
   }
 
   function handleClear() {
@@ -253,8 +316,17 @@ export default function BuildOrder() {
         <div>
           <h1 className="page-h__title">{client?.name}{client?.postcode && <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}> ({client.postcode})</span>}</h1>
           <div className="page-h__sub">
-            <span className="mono">{client?.code}</span> · {client?.group} · {isNrt ? 'NRT order' : 'Hospital order'}
-            <span style={{ marginLeft: 10 }} className="badge badge--draft">Draft</span>
+            <span className="mono">{client?.code}</span> · {client?.group}
+            <span style={{
+              marginLeft: 10, display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 11.5, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+              background: isNrt ? '#f0f9ff' : '#f0fdf4',
+              color: isNrt ? '#0369a1' : '#166534',
+              border: `1px solid ${isNrt ? '#bae6fd' : '#bbf7d0'}`,
+            }}>
+              {isNrt ? 'NRT' : 'Hospital'}
+            </span>
+            <span style={{ marginLeft: 6 }} className="badge badge--draft">Draft</span>
           </div>
         </div>
         <div className="row gap-8">
@@ -293,7 +365,7 @@ export default function BuildOrder() {
               <Icon name="alert" size={13} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>
-                  Out of stock — not available for this order
+                  Insufficient stock — not available for this order
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {draftOosRemoved.map((l, i) => (
@@ -346,6 +418,10 @@ export default function BuildOrder() {
             onDismissOos={() => setOosImport([])}
             insufficientImport={insufficientImport}
             onDismissInsufficient={() => setInsufficientImport([])}
+            wrongRouteImport={wrongRouteImport}
+            onDismissWrongRoute={() => setWrongRouteImport([])}
+            orderType={order?.type ?? 'hospital'}
+            onStartOtherOrder={() => startOtherOrder(wrongRouteImport)}
             onFileSelect={processFileQuick}
             onImportClick={() => { setImportInitialFile(null); setShowImport(true) }}
           />
@@ -469,11 +545,73 @@ export default function BuildOrder() {
       </div>
       )}
 
+      {showSaveDraftPrompt && (() => {
+        const otherTypeLabel = isNrt ? 'Hospital' : 'NRT'
+        const currentTypeLabel = isNrt ? 'NRT' : 'Hospital'
+        function proceed() {
+          setShowSaveDraftPrompt(false)
+          setWrongRouteImport([])
+          pendingNavRef.current?.()
+          pendingNavRef.current = null
+        }
+        function cancel() {
+          setShowSaveDraftPrompt(false)
+          pendingNavRef.current = null
+        }
+        return (
+          <div className="scrim">
+            <div className="modal" style={{ maxWidth: 480 }}>
+              <div className="modal__head">
+                <div className="row between">
+                  <div>
+                    <div className="label" style={{ marginBottom: 4 }}>Starting a {otherTypeLabel} order</div>
+                    <h2>Save your current order?</h2>
+                  </div>
+                  <button className="btn btn--ghost btn--icon" onClick={cancel}><Icon name="x" size={16} /></button>
+                </div>
+              </div>
+              <div className="modal__body">
+                <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span className="muted">Current order type</span>
+                    <span style={{ fontWeight: 500 }}>{currentTypeLabel}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span className="muted">Client</span>
+                    <span style={{ fontWeight: 500 }}>{client?.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="muted">Lines in current order</span>
+                    <span style={{ fontWeight: 500 }}>{lines.length}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>
+                  You're about to start a new <strong>{otherTypeLabel}</strong> order for <strong>{client?.name}</strong>. The items from your spreadsheet that belong to the {otherTypeLabel} route will be pre-populated in the new order.
+                </div>
+              </div>
+              <div className="modal__foot">
+                <button className="btn" onClick={cancel}>Cancel</button>
+                <div className="row gap-8">
+                  <button className="btn" onClick={proceed}>
+                    Don't save
+                  </button>
+                  <button className="btn btn--primary" onClick={proceed}>
+                    Save as draft <Icon name="arrow-right" size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {showImport && (
         <SpreadsheetImportModal
           catalogue={activeCatalogue}
+          orderType={order?.type ?? 'hospital'}
           onImport={layout === 'quick' ? handleImportQuick : handleImport}
-          onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]) }}
+          onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]); setWrongRouteImport([]) }}
+          onStartOtherOrder={(wrongRouteItems) => { setShowImport(false); startOtherOrder(wrongRouteItems) }}
           initialFile={importInitialFile}
         />
       )}

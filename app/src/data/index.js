@@ -8,8 +8,8 @@ export const HOSPITAL_CLIENTS = [
 ]
 
 export const ORDER_TYPES = [
-  { id: 'hospital', title: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
-  { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', desc: 'Items dispatched from a dedicated depot.', available: true },
+  { id: 'hospital', title: 'Hospital',  short: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
+  { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', short: 'NRT', desc: 'Items dispatched from a dedicated depot.', available: true },
 ]
 
 export const SHIPPING_AGENTS = [

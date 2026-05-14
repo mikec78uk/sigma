@@ -9,7 +9,7 @@ export default function NewOrderModal() {
   const location = useLocation()
   const [step, setStep] = useState(location.state?.preselectedClientId ? 2 : 1)
   const [clientId, setClientId] = useState(location.state?.preselectedClientId || '')
-  const [type, setType] = useState('hospital')
+  const [type, setType] = useState(location.state?.preselectedType || 'hospital')
   const [q, setQ] = useState('')
 
   const clients = HOSPITAL_CLIENTS.filter(c =>
@@ -139,7 +139,7 @@ export default function NewOrderModal() {
             : 'Pick a hospital account to continue'
           )}
           {step === 2 && (
-            <>Building a <b style={{ color: 'var(--ink-2)' }}>Hospital</b> order for <b style={{ color: 'var(--ink-2)' }}>{HOSPITAL_CLIENTS.find(c => c.id === clientId)?.name}</b></>
+            <>Building a <b style={{ color: 'var(--ink-2)' }}>{ORDER_TYPES.find(t => t.id === type)?.short ?? type}</b> order for <b style={{ color: 'var(--ink-2)' }}>{HOSPITAL_CLIENTS.find(c => c.id === clientId)?.name}</b></>
           )}
         </div>
         <div className="row gap-8">

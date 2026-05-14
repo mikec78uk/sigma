@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { fmt } from '../../utils/format'
+import { ORDER_TYPES } from '../../data'
 import Icon from '../../components/Icon'
 import StockDot from '../../components/StockDot'
 import VariantSelect from './VariantSelect'
@@ -20,6 +21,10 @@ export default function QuickEntryPanel({
   onDismissOos,
   insufficientImport,
   onDismissInsufficient,
+  wrongRouteImport,
+  onDismissWrongRoute,
+  orderType = 'hospital',
+  onStartOtherOrder,
   onFileSelect,
   onImportClick,
 }) {
@@ -175,7 +180,7 @@ export default function QuickEntryPanel({
     <div className="panel" style={{ flex: 1, minWidth: 0 }}>
       <div className="panel__head">
         <div>
-          <h3 style={{ fontSize: 18 }}>Create order</h3>
+          <h3 style={{ fontSize: 18 }}>{orderType === 'nrt' ? 'Create Nicotine Replacement Therapy (NRT) Order' : 'Create Hospital Order'}</h3>
           {!hasItems && (
             <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Search by name or SKU, or upload a spreadsheet</div>
           )}
@@ -307,6 +312,45 @@ export default function QuickEntryPanel({
         </div>
       )}
 
+      {/* Wrong route banner — separate, blue */}
+      {wrongRouteImport?.length > 0 && (() => {
+        const otherType = ORDER_TYPES.find(t => t.id !== orderType)
+        const currentType = ORDER_TYPES.find(t => t.id === orderType)
+        return (
+          <div style={{ margin: '12px 16px 12px', border: '1px solid #bae6fd', borderRadius: 8, overflow: 'hidden', background: '#f0f9ff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #bae6fd' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Icon name="info" size={13} style={{ color: '#0369a1', flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#0c4a6e' }}>
+                  Available via {otherType?.short ?? 'another route'}, not {currentType?.short ?? 'this route'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {onStartOtherOrder && (
+                  <button
+                    onClick={onStartOtherOrder}
+                    style={{ background: '#fff', border: '1px solid #7dd3fc', borderRadius: 5, cursor: 'pointer', fontSize: 11.5, color: '#0369a1', padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    Start {otherType?.short} order <Icon name="arrow-right" size={11} />
+                  </button>
+                )}
+                <button onClick={onDismissWrongRoute} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7dd3fc', padding: 2 }}>
+                  <Icon name="x" size={14} />
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {wrongRouteImport.map((r, i) => (
+                <span key={i} className="mono" style={{ fontSize: 11.5, background: 'rgba(186,230,253,0.3)', border: '1px solid #bae6fd', borderRadius: 4, padding: '1px 6px', color: '#0369a1' }}>
+                  {r.row != null && <span style={{ opacity: 0.6, marginRight: 4 }}>row {r.row}</span>}
+                  {r.sku}
+                </span>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Combined import issues banner */}
       {(oosImport?.length > 0 || insufficientImport?.length > 0 || unmatchedImport?.length > 0) && (
         <div style={{ margin: '12px 16px 12px', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
@@ -315,7 +359,7 @@ export default function QuickEntryPanel({
               {(oosImport?.length || 0) + (insufficientImport?.length || 0) + (unmatchedImport?.length || 0)} {((oosImport?.length || 0) + (insufficientImport?.length || 0) + (unmatchedImport?.length || 0)) === 1 ? 'item' : 'items'} from your spreadsheet could not be added
             </span>
             <button
-              onClick={() => { onDismissOos?.(); onDismissInsufficient?.(); onDismissUnmatched?.()  }}
+              onClick={() => { onDismissOos?.(); onDismissInsufficient?.(); onDismissUnmatched?.() }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 2, flexShrink: 0 }}
             >
               <Icon name="x" size={14} />

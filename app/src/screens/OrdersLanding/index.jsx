@@ -207,42 +207,48 @@ export default function OrdersLanding() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
-  function openOrder(o) {
+  const SEED_OVERRIDES = {
+    'SC-05123': { variant: 'ATORV-ACT', mld: '5' },
+    'SC-08612': { variant: 'METF-BRI',  mld: '' },
+    'SC-04128': { variant: '',           mld: '3' },
+    'SC-07811': { variant: '',           mld: '' },
+  }
+
+  function buildOrderState(o) {
     if (o.status === 'draft') {
       const seedLines = CATALOGUE.slice(0, Math.min(o.lines, 4)).map((p, i) => ({
         sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
         unit: p.promo ?? p.msp, qty: Math.max(1, (i + 1) * 2),
         description: '', stock: p.stock, stockState: p.stockState,
+        variant: '', mld: '',
       }))
-      navigate(`/orders/${o.id}/build`, {
-        state: {
-          order: {
-            draftId: o.id, clientId: o.clientId, type: o.type,
-            status: 'draft', lines: seedLines, description: o.ref,
-            agent: 'DPDP-NXT', manualPick: { enabled: false, reasonCode: '', note: '' },
-          },
-        },
-      })
+      return { isDraft: true, order: { draftId: o.id, clientId: o.clientId, type: o.type, status: 'draft', lines: seedLines, description: o.ref, agent: 'DPDP-NXT', manualPick: { enabled: false, reasonCode: '', note: '' } } }
     } else {
       const sampleNotes = ['Earliest expiry date required', 'Short-dated stock acceptable', null, null, null, null, null, null]
-      const seedLines = CATALOGUE.slice(0, Math.min(o.lines, 8)).map((p, i) => ({
-        sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
-        unit: p.promo ?? p.msp, qty: Math.max(1, (i + 1) * 2),
-        description: sampleNotes[i] || '', stock: p.stock, stockState: p.stockState,
-      }))
-      navigate(`/orders/${o.id}/view`, {
-        state: {
-          order: {
-            ...o,
-            lines: seedLines,
-            description: o.note || '',
-            poNumber: o.poNumber || '',
-            shipDate: o.shipDate || '',
-            agent: o.agent || 'DPDP-NXT',
-            manualPick: { enabled: false, reasonCode: '', note: '' },
-          },
-        },
+      const priority = ['SC-04128', 'SC-07811', 'SC-05010', 'SC-05011', 'SC-05123', 'SC-06502', 'SC-08612', 'SC-07815']
+      const skus = priority.slice(0, Math.min(o.lines, 8))
+      const seedLines = skus.map((sku, i) => {
+        const p = CATALOGUE.find(c => c.sku === sku) || CATALOGUE[i]
+        const overrides = SEED_OVERRIDES[p.sku] || {}
+        return {
+          sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
+          unit: p.promo ?? p.msp, qty: Math.max(1, (i + 1) * 2),
+          description: sampleNotes[i] || '', stock: p.stock, stockState: p.stockState,
+          variant: overrides.variant ?? '', mld: overrides.mld ?? '',
+        }
       })
+      return { isDraft: false, order: { ...o, lines: seedLines, description: o.note || '', poNumber: o.poNumber || '', shipDate: o.shipDate || '', agent: o.agent || 'DPDP-NXT', manualPick: { enabled: false, reasonCode: '', note: '' } } }
+    }
+  }
+
+  function openOrder(o, siblingIds) {
+    const { isDraft, order } = buildOrderState(o)
+    const ids = siblingIds ?? filtered.map(x => x.id)
+    const idx = ids.indexOf(o.id)
+    if (isDraft) {
+      navigate(`/orders/${o.id}/build`, { state: { order } })
+    } else {
+      navigate(`/orders/${o.id}/view`, { state: { order, orderIds: ids, orderIndex: idx } })
     }
   }
 

@@ -93,7 +93,7 @@ export default function OrderSubmitted() {
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
             <div className="label" style={{ marginBottom: 4, paddingTop: 16 }}>Order details</div>
             <Row label="Order ID"            value={orderId}                       mono />
-            <Row label="Client"              value={client?.name} />
+            <Row label="Client"              value={client ? <>{client.code && <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{client.code}</div>}{client.name}{client.postcode && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{client.postcode}</div>}</> : undefined} />
             <Row label="Lines"               value={order.lines?.length ?? 0} />
             <Row label="Total"               value={fmt(order.total)}              mono />
             <Row label="PO number"           value={order.poNumber} />
