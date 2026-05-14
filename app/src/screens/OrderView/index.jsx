@@ -221,7 +221,7 @@ export default function OrderView() {
 
       <div className="col gap-16">
 
-        {/* Approver comment callout */}
+        {/* Approver comment callout — pending-approval orders */}
         {order.status === 'pending-approval' && order.approverComment && (
           <div style={{
             display: 'flex', gap: 14, alignItems: 'flex-start',
@@ -237,6 +237,34 @@ export default function OrderView() {
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#7c3aed', marginBottom: 5 }}>Comment to approver</div>
               <div style={{ fontSize: 13.5, color: '#4c1d95', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{order.approverComment}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Approval record — approved orders */}
+        {order.approvedBy && (
+          <div style={{
+            display: 'flex', gap: 14, alignItems: 'flex-start',
+            background: '#f0fdf4', border: '1px solid #bbf7d0',
+            borderRadius: 10, padding: '14px 18px',
+          }}>
+            <div style={{
+              flexShrink: 0, width: 32, height: 32, borderRadius: '50%',
+              background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="check" size={15} style={{ color: '#16a34a' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#16a34a', marginBottom: 5 }}>Approved</div>
+              <div style={{ fontSize: 13.5, color: '#166534', lineHeight: 1.55 }}>
+                Approved by <strong>{order.approvedBy}</strong> on {order.approvedAt}
+              </div>
+              {order.approverComment && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#16a34a', marginBottom: 4, opacity: 0.8 }}>Submitter's comment</div>
+                  <div style={{ fontSize: 13, color: '#166534', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{order.approverComment}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
