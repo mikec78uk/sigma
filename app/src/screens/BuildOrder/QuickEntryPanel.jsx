@@ -43,10 +43,10 @@ export default function QuickEntryPanel({
 
   // Auto-focus variant select when a variant-bearing line is first added
   useEffect(() => {
-    const prevSkus = new Set(prevLinesRef.current.map(l => l.sku))
-    const newVariantLine = lines.find(l => l.variants?.length > 0 && !l.variant && !prevSkus.has(l.sku))
+    const prevIds = new Set(prevLinesRef.current.map(l => l.lineId))
+    const newVariantLine = lines.find(l => l.variants?.length > 0 && !l.variant && !prevIds.has(l.lineId))
     if (newVariantLine) {
-      variantRefs.current[newVariantLine.sku]?.focus()
+      variantRefs.current[newVariantLine.lineId]?.focus()
     }
     prevLinesRef.current = lines
   }, [lines])
@@ -139,18 +139,18 @@ export default function QuickEntryPanel({
     return arr
   }
 
-  function startEditUnit(sku, val) {
-    setEditingUnit(prev => ({ ...prev, [sku]: (Math.round(val * 100) / 100).toFixed(2) }))
+  function startEditUnit(lineId, val) {
+    setEditingUnit(prev => ({ ...prev, [lineId]: (Math.round(val * 100) / 100).toFixed(2) }))
   }
 
   function commitUnit(l) {
-    const draft = editingUnit[l.sku]
-    setEditingUnit(prev => { const { [l.sku]: _, ...rest } = prev; return rest })
+    const draft = editingUnit[l.lineId]
+    setEditingUnit(prev => { const { [l.lineId]: _, ...rest } = prev; return rest })
     if (draft === undefined) return
     const raw = parseFloat(draft)
     if (isNaN(raw) || raw <= 0) return
     const snapped = Math.round(raw * 100) / 100
-    setUnit(l.sku, snapped)
+    setUnit(l.lineId, snapped)
   }
 
   function downloadTemplate() {
@@ -180,16 +180,28 @@ export default function QuickEntryPanel({
     <div className="panel" style={{ flex: 1, minWidth: 0 }}>
       <div className="panel__head">
         <div>
-          <h3 style={{ fontSize: 18 }}>{orderType === 'nrt' ? 'Create Nicotine Replacement Therapy (NRT) Order' : 'Create Hospital Order'}</h3>
+          <h3 style={{ fontSize: 18 }}>Create order</h3>
           {!hasItems && (
             <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Search by name or SKU, or upload a spreadsheet</div>
           )}
         </div>
-        {hasItems && (
-          <button className="btn" onClick={onImportClick}>
-            <Icon name="doc" size={14} /> Import spreadsheet
-          </button>
-        )}
+        <div className="row gap-8" style={{ alignItems: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', fontSize: 11.5, fontWeight: 600,
+            padding: '2px 8px', borderRadius: 4,
+            background: orderType === 'nrt' ? '#f0f9ff' : '#f0fdf4',
+            color: orderType === 'nrt' ? '#0369a1' : '#166534',
+            border: `1px solid ${orderType === 'nrt' ? '#bae6fd' : '#bbf7d0'}`,
+          }}>
+            {orderType === 'nrt' ? 'NRT' : 'Hospital / Bulk / MLD'}
+          </span>
+          <span className="badge badge--draft">Draft</span>
+          {hasItems && (
+            <button className="btn" onClick={onImportClick}>
+              <Icon name="doc" size={14} /> Import spreadsheet
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Autocomplete search */}
@@ -325,19 +337,9 @@ export default function QuickEntryPanel({
                   Available via {otherType?.short ?? 'another route'}, not {currentType?.short ?? 'this route'}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                {onStartOtherOrder && (
-                  <button
-                    onClick={onStartOtherOrder}
-                    style={{ background: '#fff', border: '1px solid #7dd3fc', borderRadius: 5, cursor: 'pointer', fontSize: 11.5, color: '#0369a1', padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
-                  >
-                    Start {otherType?.short} order <Icon name="arrow-right" size={11} />
-                  </button>
-                )}
-                <button onClick={onDismissWrongRoute} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7dd3fc', padding: 2 }}>
-                  <Icon name="x" size={14} />
-                </button>
-              </div>
+              <button onClick={onDismissWrongRoute} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7dd3fc', padding: 2 }}>
+                <Icon name="x" size={14} />
+              </button>
             </div>
             <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {wrongRouteImport.map((r, i) => (
@@ -422,8 +424,8 @@ export default function QuickEntryPanel({
         </div>
       )}
       {hasItems && (
-        <div className="panel__body panel__body--flush">
-          <table className="tbl">
+        <div className="panel__body panel__body--flush" style={{ overflowX: 'auto' }}>
+          <table className="tbl" style={{ minWidth: 780 }}>
             <thead>
               <tr>
                 {COLS.map(({ col, label, right }) => (
@@ -441,8 +443,8 @@ export default function QuickEntryPanel({
             </thead>
             <tbody>
               {sortedLines().map(l => {
-                const noteOpen = openNotes[l.sku]
-                const unitDraft = editingUnit[l.sku]
+                const noteOpen = openNotes[l.lineId]
+                const unitDraft = editingUnit[l.lineId]
                 const displayUnit = unitDraft !== undefined ? unitDraft : (Math.round(l.unit * 100) / 100).toFixed(2)
                 const draftVal = unitDraft !== undefined ? parseFloat(unitDraft) : null
                 const isBelowMsp = unitDraft !== undefined
@@ -451,7 +453,7 @@ export default function QuickEntryPanel({
                 const isOos = l.stockState === 'out'
                 const hasMld = l.mld !== '' && !isNaN(parseFloat(l.mld)) && parseFloat(l.mld) > 0
                 return (
-                  <Fragment key={l.sku}>
+                  <Fragment key={l.lineId}>
                     <tr style={isOos ? { background: 'rgba(239,68,68,0.04)' } : hasMld ? { background: 'rgba(16,185,129,0.06)' } : {}}>
                       <td className="mono muted" style={{ fontSize: 12 }}>{l.sku}</td>
                       <td style={{ maxWidth: 220 }}>
@@ -466,13 +468,12 @@ export default function QuickEntryPanel({
                       {hasVariantLines && (
                         <td style={{ minWidth: 130 }}>
                           {l.variants?.length > 0 ? (
-                            <div ref={el => { if (el) variantRefs.current[l.sku] = el }}>
-                              <VariantSelect
-                                variants={l.variants}
-                                value={l.variant || ''}
-                                onChange={code => setVariant(l.sku, code)}
-                              />
-                            </div>
+                            <VariantSelect
+                              ref={el => { variantRefs.current[l.lineId] = el }}
+                              variants={l.variants}
+                              value={l.variant || ''}
+                              onChange={code => setVariant(l.lineId, code)}
+                            />
                           ) : (
                             <span className="muted" style={{ fontSize: 12 }}>—</span>
                           )}
@@ -488,8 +489,8 @@ export default function QuickEntryPanel({
                               className="input"
                               style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
                               value={displayUnit}
-                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.sku]: e.target.value }))}
-                              onFocus={() => startEditUnit(l.sku, l.unit)}
+                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
+                              onFocus={() => startEditUnit(l.lineId, l.unit)}
                               onBlur={() => commitUnit(l)}
                             />
                           </div>
@@ -513,13 +514,13 @@ export default function QuickEntryPanel({
                             value={l.mld ?? ''}
                             onChange={e => {
                               const raw = e.target.value
-                              if (raw === '') { setMld(l.sku, ''); return }
+                              if (raw === '') { setMld(l.lineId, ''); return }
                               const v = parseFloat(raw)
-                              if (!isNaN(v) && v >= 0 && v <= 100) setMld(l.sku, raw)
+                              if (!isNaN(v) && v >= 0 && v <= 100) setMld(l.lineId, raw)
                             }}
                             onBlur={e => {
                               const v = parseFloat(e.target.value)
-                              if (!isNaN(v)) setMld(l.sku, (Math.round(v * 10) / 10).toString())
+                              if (!isNaN(v)) setMld(l.lineId, (Math.round(v * 10) / 10).toString())
                             }}
                           />
                           <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>%</span>
@@ -534,7 +535,7 @@ export default function QuickEntryPanel({
                           value={l.qty}
                           onChange={e => {
                             const v = parseInt(e.target.value, 10)
-                            if (!isNaN(v) && v > 0) setQty(l.sku, v)
+                            if (!isNaN(v) && v > 0) setQty(l.lineId, v)
                           }}
                         />
                       </td>
@@ -549,8 +550,8 @@ export default function QuickEntryPanel({
                                 background: l.description && !noteOpen ? 'var(--surface-2)' : undefined,
                                 borderColor: l.description && !noteOpen ? 'var(--border)' : undefined,
                               }}
-                              onClick={() => setOpenNotes(n => ({ ...n, [l.sku]: !n[l.sku] }))}
-                              onMouseEnter={() => l.description && !noteOpen && setHoveredNote(l.sku)}
+                              onClick={() => setOpenNotes(n => ({ ...n, [l.lineId]: !n[l.lineId] }))}
+                              onMouseEnter={() => l.description && !noteOpen && setHoveredNote(l.lineId)}
                               onMouseLeave={() => setHoveredNote(null)}
                             >
                               <Icon name="edit" size={13} />
@@ -558,7 +559,7 @@ export default function QuickEntryPanel({
                                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--ink-2)', flexShrink: 0 }} />
                               )}
                             </button>
-                            {hoveredNote === l.sku && l.description && (
+                            {hoveredNote === l.lineId && l.description && (
                               <div style={{
                                 position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
                                 background: 'var(--ink)', color: '#fff', fontSize: 12, lineHeight: 1.4,
@@ -580,7 +581,7 @@ export default function QuickEntryPanel({
                             className="btn btn--ghost btn--icon btn--sm"
                             title="Remove line"
                             style={{ color: 'var(--ink-3)' }}
-                            onClick={() => removeLine(l.sku)}
+                            onClick={() => removeLine(l.lineId)}
                           >
                             <Icon name="trash" size={13} />
                           </button>
@@ -588,7 +589,7 @@ export default function QuickEntryPanel({
                       </td>
                     </tr>
                     {noteOpen && (
-                      <tr key={l.sku + '-note'}>
+                      <tr key={l.lineId + '-note'}>
                         <td colSpan={hasVariantLines ? 9 : 8} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
@@ -596,14 +597,14 @@ export default function QuickEntryPanel({
                                 className="input"
                                 placeholder="Line note (visible on SAP order line)…"
                                 value={l.description || ''}
-                                onChange={e => setLineDesc(l.sku, e.target.value)}
+                                onChange={e => setLineDesc(l.lineId, e.target.value)}
                                 style={{ fontSize: 12.5, width: '100%', paddingRight: l.description ? 28 : undefined }}
                                 autoFocus
-                                onKeyDown={e => { if (e.key === 'Enter') setOpenNotes(n => ({ ...n, [l.sku]: false })) }}
+                                onKeyDown={e => { if (e.key === 'Enter') setOpenNotes(n => ({ ...n, [l.lineId]: false })) }}
                               />
                               {l.description && (
                                 <button
-                                  onMouseDown={e => { e.preventDefault(); setLineDesc(l.sku, '') }}
+                                  onMouseDown={e => { e.preventDefault(); setLineDesc(l.lineId, '') }}
                                   style={{
                                     position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
                                     background: 'none', border: 'none', cursor: 'pointer',
@@ -617,7 +618,7 @@ export default function QuickEntryPanel({
                             </div>
                             <button
                               className="btn btn--sm btn--primary"
-                              onClick={() => setOpenNotes(n => ({ ...n, [l.sku]: false }))}
+                              onClick={() => setOpenNotes(n => ({ ...n, [l.lineId]: false }))}
                             >
                               Save note
                             </button>

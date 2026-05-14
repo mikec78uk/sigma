@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react' // useRef kept for prevDraftIdRef
 import { useNavigate, useLocation } from 'react-router-dom'
 import { HOSPITAL_CLIENTS, CATALOGUE, NRT_CATALOGUE, NRT_CATEGORIES, CATEGORIES } from '../../data'
 import { fmt } from '../../utils/format'
@@ -21,8 +21,6 @@ export default function BuildOrder() {
   const [oosImport, setOosImport] = useState([])
   const [insufficientImport, setInsufficientImport] = useState([])
   const [wrongRouteImport, setWrongRouteImport] = useState([])
-  const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false)
-  const pendingNavRef = useRef(null)
 
   function processFileQuick(file) {
     const reader = new FileReader()
@@ -65,14 +63,18 @@ export default function BuildOrder() {
 
   const [draftOosRemoved, setDraftOosRemoved] = useState([])
 
+  const lineIdRef = useRef(0)
+  function nextLineId() { return ++lineIdRef.current }
+
   // On load, strip any OOS lines from a draft and surface them as a banner
   const initialLines = useMemo(() => {
     if (!order?.lines) return []
     const oos = [], ok = []
     order.lines.forEach(l => {
       const current = CATALOGUE.find(p => p.sku === l.sku)
-      if ((current?.stockState ?? l.stockState) === 'out') oos.push(l)
-      else ok.push(l)
+      const withId = l.lineId ? l : { ...l, lineId: nextLineId() }
+      if ((current?.stockState ?? l.stockState) === 'out') oos.push(withId)
+      else ok.push(withId)
     })
     if (oos.length) setDraftOosRemoved(oos)
     return ok
@@ -148,69 +150,77 @@ export default function BuildOrder() {
   }, 0)
   const total = subtotal - mldDiscount
 
-  function findLine(sku) { return lines.find(l => l.sku === sku) }
-
   function addToBasket(p) {
-    const existing = findLine(p.sku)
-    if (existing) {
-      setLines(lines.map(l => l.sku === p.sku ? { ...l, qty: l.qty + 1 } : l))
-    } else {
-      setLines([{
-        sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
-        unit: p.promo || p.msp, qty: 1, description: '',
-        stock: p.stock, stockState: p.stockState,
-        variants: p.variants || null, variant: '', mld: '',
-      }, ...lines])
+    // Variant products can have multiple lines (one per variant); non-variant products increment
+    const hasVariants = p.variants?.length > 0
+    if (!hasVariants) {
+      const existing = lines.find(l => l.sku === p.sku)
+      if (existing) {
+        setLines(lines.map(l => l.lineId === existing.lineId ? { ...l, qty: l.qty + 1 } : l))
+        return
+      }
     }
+    setLines([{
+      lineId: nextLineId(),
+      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
+      unit: p.promo || p.msp, qty: 1, description: '',
+      stock: p.stock, stockState: p.stockState,
+      variants: p.variants || null, variant: '', mld: '',
+    }, ...lines])
   }
 
   function addToBasketQuick(p) {
-    const existing = findLine(p.sku)
-    if (existing) {
-      setLines(lines.map(l => l.sku === p.sku ? { ...l, qty: l.qty + 1 } : l))
-    } else {
-      const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
-      setLines([{
-        sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
-        unit: unitPrice, qty: 1, description: '',
-        stock: p.stock, stockState: p.stockState,
-        variants: p.variants || null, variant: '', mld: '',
-      }, ...lines])
+    const hasVariants = p.variants?.length > 0
+    if (!hasVariants) {
+      const existing = lines.find(l => l.sku === p.sku)
+      if (existing) {
+        setLines(lines.map(l => l.lineId === existing.lineId ? { ...l, qty: l.qty + 1 } : l))
+        return
+      }
     }
+    const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
+    setLines([{
+      lineId: nextLineId(),
+      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
+      unit: unitPrice, qty: 1, description: '',
+      stock: p.stock, stockState: p.stockState,
+      variants: p.variants || null, variant: '', mld: '',
+    }, ...lines])
   }
 
-  function setVariant(sku, variant) {
-    setLines(lines.map(l => l.sku === sku ? { ...l, variant } : l))
+  function setVariant(lineId, variant) {
+    setLines(lines.map(l => l.lineId === lineId ? { ...l, variant } : l))
   }
 
-  function setMld(sku, mld) {
-    setLines(lines.map(l => l.sku === sku ? { ...l, mld } : l))
+  function setMld(lineId, mld) {
+    setLines(lines.map(l => l.lineId === lineId ? { ...l, mld } : l))
   }
 
-  function setQty(sku, qty) {
-    if (qty <= 0) { setLines(lines.filter(l => l.sku !== sku)); return }
-    setLines(lines.map(l => l.sku === sku ? { ...l, qty } : l))
+  function setQty(lineId, qty) {
+    if (qty <= 0) { setLines(lines.filter(l => l.lineId !== lineId)); return }
+    setLines(lines.map(l => l.lineId === lineId ? { ...l, qty } : l))
   }
 
-  function setUnit(sku, unit) {
-    setLines(lines.map(l => l.sku === sku ? { ...l, unit } : l))
+  function setUnit(lineId, unit) {
+    setLines(lines.map(l => l.lineId === lineId ? { ...l, unit } : l))
   }
 
-  function setLineDesc(sku, description) {
-    setLines(lines.map(l => l.sku === sku ? { ...l, description } : l))
+  function setLineDesc(lineId, description) {
+    setLines(lines.map(l => l.lineId === lineId ? { ...l, description } : l))
   }
 
-  function removeLine(sku) { setLines(lines.filter(l => l.sku !== sku)) }
+  function removeLine(lineId) { setLines(lines.filter(l => l.lineId !== lineId)) }
 
   function handleImport(importedLines, importedUnmatched = [], importedOos = []) {
     setLines(prev => {
       const next = [...prev]
       importedLines.forEach(({ product: p, qty }) => {
-        const idx = next.findIndex(l => l.sku === p.sku)
+        const hasVariants = p.variants?.length > 0
+        const idx = hasVariants ? -1 : next.findIndex(l => l.sku === p.sku)
         if (idx >= 0) {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
-          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: p.promo ?? p.msp, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: p.promo ?? p.msp, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -226,12 +236,13 @@ export default function BuildOrder() {
     setLines(prev => {
       const next = [...prev]
       importedLines.forEach(({ product: p, qty }) => {
-        const idx = next.findIndex(l => l.sku === p.sku)
+        const hasVariants = p.variants?.length > 0
+        const idx = hasVariants ? -1 : next.findIndex(l => l.sku === p.sku)
         if (idx >= 0) {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
           const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
-          next.unshift({ sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: unitPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: unitPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -242,35 +253,7 @@ export default function BuildOrder() {
     if (importedWrongRoute.length > 0) setWrongRouteImport(importedWrongRoute)
   }
 
-  function startOtherOrder(wrongRouteItems) {
-    const otherType = isNrt ? 'hospital' : 'nrt'
-    const newDraftId = 'DR-2026-00' + Math.floor(300 + Math.random() * 99)
-    pendingNavRef.current = () => {
-      navigate(`/orders/${newDraftId}/build`, {
-        state: {
-          order: {
-            draftId: newDraftId,
-            clientId: order?.clientId,
-            type: otherType,
-            status: 'draft',
-            lines: (wrongRouteItems || []).map(r => ({
-              sku: r.product.sku, name: r.product.name, pack: r.product.pack,
-              msp: r.product.msp, promo: r.product.promo,
-              unit: r.product.promo ?? r.product.msp,
-              qty: r.qty, description: '', stock: r.product.stock,
-              stockState: r.product.stockState,
-              variants: r.product.variants || null, variant: '', mld: '',
-            })),
-            description: '', agent: 'DPDP-NXT',
-            manualPick: { enabled: false, reasonCode: '', note: '' },
-          },
-        },
-      })
-    }
-    setShowSaveDraftPrompt(true)
-  }
-
-  function handleClear() {
+function handleClear() {
     setLines([])
     setOrderDesc('')
     setPoNumber('')
@@ -282,11 +265,24 @@ export default function BuildOrder() {
     setInsufficientImport([])
   }
 
+  const needsApproval = lines.some(l => l.unit < l.msp - 0.001)
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
+  const [approverComment, setApproverComment] = useState('')
+
   function handleSubmit() {
+    if (needsApproval) {
+      setApproverComment('')
+      setApprovalModalOpen(true)
+      return
+    }
+    submitOrder()
+  }
+
+  function submitOrder(comment) {
     const orderId = 'SO-2026-' + Math.floor(40000 + Math.random() * 9000)
     navigate(`/orders/${orderId}/submitted`, {
       state: {
-        order: { ...order, lines, description: orderDesc, poNumber, shipDate, agent, manualPick, total },
+        order: { ...order, lines, description: orderDesc, poNumber, shipDate, agent, manualPick, total, approverComment: comment || '' },
       },
     })
   }
@@ -304,6 +300,57 @@ export default function BuildOrder() {
 
   return (
     <div className={'page__body ' + (layout === 'split' || layout === 'quick' ? 'page__body--wide' : '')}>
+
+      {/* Approval comment modal */}
+      {approvalModalOpen && (
+        <div className="scrim">
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal__head">
+              <div className="row between">
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Approval required</div>
+                  <h2>Submit for approval</h2>
+                </div>
+                <button className="btn btn--ghost btn--icon" onClick={() => setApprovalModalOpen(false)}>
+                  <Icon name="x" size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="modal__body">
+              <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginBottom: 16 }}>
+                This order contains lines priced below MSP and will be sent for commercial approval before fulfilment can begin.
+              </div>
+              <div className="field">
+                <div className="field__label">
+                  Comment to approver <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                </div>
+                <textarea
+                  className="input"
+                  autoFocus
+                  rows={5}
+                  placeholder="Add any context that might help the approver — e.g. reason for the pricing, urgency, client relationship…"
+                  value={approverComment}
+                  onChange={e => setApproverComment(e.target.value)}
+                  style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', padding: 14, height: 140 }}
+                />
+              </div>
+            </div>
+            <div className="modal__foot">
+              <div />
+              <div className="row gap-8">
+                <button className="btn" onClick={() => setApprovalModalOpen(false)}>Cancel</button>
+                <button
+                  className="btn btn--primary"
+                  onClick={() => { setApprovalModalOpen(false); submitOrder(approverComment) }}
+                >
+                  <Icon name="check" size={14} /> Submit for approval
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="crumbs">
         <a onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Orders</a>
         <Icon name="chevron-right" size={12} className="crumbs__sep" />
@@ -317,16 +364,6 @@ export default function BuildOrder() {
           <h1 className="page-h__title">{client?.name}{client?.postcode && <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}> ({client.postcode})</span>}</h1>
           <div className="page-h__sub">
             <span className="mono">{client?.code}</span> · {client?.group}
-            <span style={{
-              marginLeft: 10, display: 'inline-flex', alignItems: 'center', gap: 4,
-              fontSize: 11.5, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-              background: isNrt ? '#f0f9ff' : '#f0fdf4',
-              color: isNrt ? '#0369a1' : '#166534',
-              border: `1px solid ${isNrt ? '#bae6fd' : '#bbf7d0'}`,
-            }}>
-              {isNrt ? 'NRT' : 'Hospital'}
-            </span>
-            <span style={{ marginLeft: 6 }} className="badge badge--draft">Draft</span>
           </div>
         </div>
         <div className="row gap-8">
@@ -421,8 +458,7 @@ export default function BuildOrder() {
             wrongRouteImport={wrongRouteImport}
             onDismissWrongRoute={() => setWrongRouteImport([])}
             orderType={order?.type ?? 'hospital'}
-            onStartOtherOrder={() => startOtherOrder(wrongRouteImport)}
-            onFileSelect={processFileQuick}
+            onFileSelect={(file) => { setImportInitialFile(file); setShowImport(true) }}
             onImportClick={() => { setImportInitialFile(null); setShowImport(true) }}
           />
           <aside className="builder__basket">
@@ -545,65 +581,6 @@ export default function BuildOrder() {
       </div>
       )}
 
-      {showSaveDraftPrompt && (() => {
-        const otherTypeLabel = isNrt ? 'Hospital' : 'NRT'
-        const currentTypeLabel = isNrt ? 'NRT' : 'Hospital'
-        function proceed() {
-          setShowSaveDraftPrompt(false)
-          setWrongRouteImport([])
-          pendingNavRef.current?.()
-          pendingNavRef.current = null
-        }
-        function cancel() {
-          setShowSaveDraftPrompt(false)
-          pendingNavRef.current = null
-        }
-        return (
-          <div className="scrim">
-            <div className="modal" style={{ maxWidth: 480 }}>
-              <div className="modal__head">
-                <div className="row between">
-                  <div>
-                    <div className="label" style={{ marginBottom: 4 }}>Starting a {otherTypeLabel} order</div>
-                    <h2>Save your current order?</h2>
-                  </div>
-                  <button className="btn btn--ghost btn--icon" onClick={cancel}><Icon name="x" size={16} /></button>
-                </div>
-              </div>
-              <div className="modal__body">
-                <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span className="muted">Current order type</span>
-                    <span style={{ fontWeight: 500 }}>{currentTypeLabel}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span className="muted">Client</span>
-                    <span style={{ fontWeight: 500 }}>{client?.name}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="muted">Lines in current order</span>
-                    <span style={{ fontWeight: 500 }}>{lines.length}</span>
-                  </div>
-                </div>
-                <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>
-                  You're about to start a new <strong>{otherTypeLabel}</strong> order for <strong>{client?.name}</strong>. The items from your spreadsheet that belong to the {otherTypeLabel} route will be pre-populated in the new order.
-                </div>
-              </div>
-              <div className="modal__foot">
-                <button className="btn" onClick={cancel}>Cancel</button>
-                <div className="row gap-8">
-                  <button className="btn" onClick={proceed}>
-                    Don't save
-                  </button>
-                  <button className="btn btn--primary" onClick={proceed}>
-                    Save as draft <Icon name="arrow-right" size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {showImport && (
         <SpreadsheetImportModal
@@ -611,7 +588,6 @@ export default function BuildOrder() {
           orderType={order?.type ?? 'hospital'}
           onImport={layout === 'quick' ? handleImportQuick : handleImport}
           onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]); setWrongRouteImport([]) }}
-          onStartOtherOrder={(wrongRouteItems) => { setShowImport(false); startOtherOrder(wrongRouteItems) }}
           initialFile={importInitialFile}
         />
       )}

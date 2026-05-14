@@ -59,6 +59,7 @@ export default function OrdersLanding() {
   const [rejectModalId, setRejectModalId] = useState(null)
   const [rejectNote, setRejectNote] = useState('')
   const [hoveredRejection, setHoveredRejection] = useState(null)
+  const [hoveredApproverComment, setHoveredApproverComment] = useState(null)
   // Toast stack: [{ id, message, type }]
   const [toasts, setToasts] = useState([])
   function addToast(message, type = 'success') {
@@ -364,7 +365,7 @@ export default function OrdersLanding() {
                 {[
                   { col: 'id',     label: 'Order',     cls: ''      },
                   { col: 'client', label: 'Client',    cls: ''      },
-                  { col: null,     label: 'Type',      cls: ''      },
+                  // { col: null,     label: 'Type',      cls: ''      },
                   { col: 'placed', label: 'Placed',    cls: ''      },
                   { col: 'po',     label: 'PO number', cls: ''      },
                   { col: 'lines',  label: 'Lines',     cls: 'right' },
@@ -402,11 +403,13 @@ export default function OrdersLanding() {
                       <td>
                         <div><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{client?.code}</span>{client?.name}{client?.postcode && <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>({client.postcode})</span>}</div>
                       </td>
+                      {/* Type column hidden — uncomment header { col: null, label: 'Type' } to restore
                       <td>
                         <span className="badge" style={o.type === 'nrt' ? { background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' } : {}}>
                           {o.type === 'nrt' ? 'NRT' : 'Hospital'}
                         </span>
                       </td>
+                      */}
                       <td className="mono" style={{ fontSize: 12 }}>{o.placed?.split(' ')[0]}</td>
                       <td className="mono muted" style={{ fontSize: 12 }}>{o.poNumber || <span style={{ color: 'var(--ink-4)' }}>—</span>}</td>
                       <td className="right tnum mono">{o.lines}</td>
@@ -432,6 +435,33 @@ export default function OrdersLanding() {
                                 }}>
                                   <div style={{ fontWeight: 600, marginBottom: 3, opacity: 0.7, fontSize: 11 }}>REJECTION NOTE</div>
                                   {o.rejectionNote}
+                                  <div style={{
+                                    position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                                    borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                                    borderTop: '5px solid var(--ink)',
+                                  }} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {o.status === 'pending-approval' && o.approverComment && (
+                            <div
+                              style={{ position: 'relative', display: 'inline-flex' }}
+                              onMouseEnter={() => setHoveredApproverComment(o.id)}
+                              onMouseLeave={() => setHoveredApproverComment(null)}
+                            >
+                              <Icon name="edit" size={13} style={{ color: '#7c3aed', cursor: 'default' }} />
+                              {hoveredApproverComment === o.id && (
+                                <div style={{
+                                  position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+                                  transform: 'translateX(-50%)', zIndex: 300,
+                                  background: 'var(--ink)', color: '#fff', fontSize: 12, lineHeight: 1.5,
+                                  padding: '8px 12px', borderRadius: 6, whiteSpace: 'normal',
+                                  width: 280, wordBreak: 'break-word',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)', pointerEvents: 'none',
+                                }}>
+                                  <div style={{ fontWeight: 600, marginBottom: 3, opacity: 0.7, fontSize: 11 }}>COMMENT TO APPROVER</div>
+                                  {o.approverComment}
                                   <div style={{
                                     position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                                     borderLeft: '5px solid transparent', borderRight: '5px solid transparent',

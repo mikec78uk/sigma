@@ -76,7 +76,7 @@ export default function OrderSubmitted() {
             <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e', marginBottom: 8 }}>Lines requiring approval</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {belowMspLines.map(l => (
-                <div key={l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
+                <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
                   <span className="mono" style={{ fontSize: 11.5, color: '#92400e', flexShrink: 0 }}>{l.sku}</span>
                   <span style={{ flex: 1, color: '#78350f' }}>{l.name}</span>
                   <span className="mono" style={{ fontSize: 12, color: '#92400e', flexShrink: 0 }}>
@@ -85,6 +85,12 @@ export default function OrderSubmitted() {
                 </div>
               ))}
             </div>
+            {order.approverComment && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #fde68a' }}>
+                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, color: '#92400e', marginBottom: 5 }}>Comment to approver</div>
+                <div style={{ fontSize: 13, color: '#78350f', whiteSpace: 'pre-wrap' }}>{order.approverComment}</div>
+              </div>
+            )}
           </div>
         )}
 

@@ -32,7 +32,7 @@ function parseCSV(text) {
   return { rows, error: null }
 }
 
-export default function SpreadsheetImportModal({ catalogue = [], orderType = 'hospital', onImport, onClose, onStartOtherOrder, initialFile }) {
+export default function SpreadsheetImportModal({ catalogue = [], orderType = 'hospital', onImport, onClose, initialFile }) {
   const [step, setStep] = useState('upload') // 'upload' | 'preview'
   const [fileName, setFileName] = useState('')
   const [parseError, setParseError] = useState(null)
@@ -190,7 +190,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
         {step === 'preview' && (
           <div className="col gap-16">
             {/* Summary strip */}
-            <div className="row gap-12">
+            <div className="row gap-12" style={{ alignItems: 'stretch' }}>
               <div style={{ flex: 1, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: '#166534' }}>{matched.length}</div>
                 <div style={{ fontSize: 13, color: '#166534', marginTop: 2 }}>lines matched</div>
@@ -204,7 +204,9 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               {wrongRoute.length > 0 && (
                 <div style={{ flex: 1, background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 14px' }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: '#0c4a6e' }}>{wrongRoute.length}</div>
-                  <div style={{ fontSize: 13, color: '#0369a1', marginTop: 2 }}>different route</div>
+                  <div style={{ fontSize: 13, color: '#0369a1', marginTop: 2 }}>
+                    {orderType === 'nrt' ? 'Non NRT product codes' : 'Non Hospital / Bulk / MLD product codes'}
+                  </div>
                 </div>
               )}
               {unmatched.length > 0 && (
@@ -264,15 +266,6 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
                       These {wrongRoute.length === 1 ? 'product is' : 'products are'} only available on the {otherType?.short} order route and won't be added here.
                     </div>
                   </div>
-                  {onStartOtherOrder && (
-                    <button
-                      className="btn btn--sm"
-                      onClick={() => onStartOtherOrder(wrongRoute)}
-                      style={{ flexShrink: 0, fontSize: 12, color: '#0369a1', borderColor: '#7dd3fc', background: '#fff', whiteSpace: 'nowrap' }}
-                    >
-                      Start {otherType?.short} order <Icon name="arrow-right" size={12} />
-                    </button>
-                  )}
                 </div>
                 {/* Table */}
                 <table className="tbl">

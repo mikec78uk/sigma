@@ -8,7 +8,7 @@ export const HOSPITAL_CLIENTS = [
 ]
 
 export const ORDER_TYPES = [
-  { id: 'hospital', title: 'Hospital',  short: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
+  { id: 'hospital', title: 'Hospital / Bulk / MLD',  short: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
   { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', short: 'NRT', desc: 'Items dispatched from a dedicated depot.', available: true },
 ]
 
@@ -126,8 +126,8 @@ export const NRT_CATALOGUE = [
 ]
 
 export const ORDERS_SEED = [
-  { id: 'SO-2026-04425', ref: 'Respiratory stock top-up',           clientId: 'NCH-220', type: 'hospital', status: 'pending-approval', placed: '2026-05-12 10:14', lines: 7,  total: 1840.20, agent: 'DPDP-NXT',  poNumber: 'PO-2026-00848', shipDate: '2026-05-16', note: null },
-  { id: 'SO-2026-04424', ref: 'Diabetic ward restock',              clientId: 'BHA-001', type: 'hospital', status: 'pending-approval', placed: '2026-05-11 16:22', lines: 12, total: 3210.55, agent: 'OWN-FLT',   poNumber: 'PO-2026-00846', shipDate: '2026-05-15', note: 'Urgent — ward running low on insulin supplies.' },
+  { id: 'SO-2026-04425', ref: 'Respiratory stock top-up',           clientId: 'NCH-220', type: 'hospital', status: 'pending-approval', placed: '2026-05-12 10:14', lines: 7,  total: 1840.20, agent: 'DPDP-NXT',  poNumber: 'PO-2026-00848', shipDate: '2026-05-16', note: null, approverComment: 'Pricing agreed with account manager Sarah T. on 10 May — see email thread ref #4821.' },
+  { id: 'SO-2026-04424', ref: 'Diabetic ward restock',              clientId: 'BHA-001', type: 'hospital', status: 'pending-approval', placed: '2026-05-11 16:22', lines: 12, total: 3210.55, agent: 'OWN-FLT',   poNumber: 'PO-2026-00846', shipDate: '2026-05-15', note: 'Urgent — ward running low on insulin supplies.', approverComment: null },
   { id: 'SO-2026-04421', ref: 'Pharmacy Dispensary — Apr restock',  clientId: 'BHA-001', type: 'hospital', status: 'submitted', placed: '2026-05-09 09:12', lines: 18, total: 4128.42, agent: 'DPDP-NXT',  poNumber: 'PO-2026-00841', shipDate: '2026-05-12', note: 'Please deliver to pharmacy goods-in. Contact Jane Marsh on arrival.' },
   { id: 'SO-2026-04420', ref: 'Critical antibiotics top-up',         clientId: 'MAN-411', type: 'hospital', status: 'submitted', placed: '2026-05-09 08:46', lines: 6,  total: 942.18,  agent: 'OWN-FLT-N', poNumber: 'PO-2026-00840', shipDate: '2026-05-13', note: null },
   { id: 'SO-2026-04419', ref: 'Ward 4B controlled drugs',            clientId: 'LST-318', type: 'hospital', status: 'submitted', placed: '2026-05-08 17:31', lines: 4,  total: 318.40,  agent: 'DHL-MED',   poNumber: 'PO-2026-00837', shipDate: '2026-05-14', note: 'Batch traceability documentation required with delivery.' },

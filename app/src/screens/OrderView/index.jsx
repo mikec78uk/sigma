@@ -221,15 +221,36 @@ export default function OrderView() {
 
       <div className="col gap-16">
 
+        {/* Approver comment callout */}
+        {order.status === 'pending-approval' && order.approverComment && (
+          <div style={{
+            display: 'flex', gap: 14, alignItems: 'flex-start',
+            background: '#faf5ff', border: '1px solid #e9d5ff',
+            borderRadius: 10, padding: '14px 18px',
+          }}>
+            <div style={{
+              flexShrink: 0, width: 32, height: 32, borderRadius: '50%',
+              background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="edit" size={15} style={{ color: '#7c3aed' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#7c3aed', marginBottom: 5 }}>Comment to approver</div>
+              <div style={{ fontSize: 13.5, color: '#4c1d95', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{order.approverComment}</div>
+            </div>
+          </div>
+        )}
+
         {/* Order metadata */}
         <div className="panel">
           <div className="panel__head">
             <h3 style={{ fontSize: 15 }}>Order details</h3>
           </div>
-          <div style={{ padding: '0 24px 20px', maxWidth: 600 }}>
+          <div style={{ padding: '0 24px 20px' }}>
             <MetaRow label="Order ID"           value={<span className="mono" style={{ fontWeight: 600 }}>{orderId}</span>} />
             <MetaRow label="Status"             value={<StatusBadge status={order.status} />} />
-            <MetaRow label="Client"             value={client ? `${client.name} (${client.code})` : null} />
+            <MetaRow label="Order type"         value={order.type === 'nrt' ? 'Nicotine Replacement Therapy (NRT)' : 'Hospital / Bulk / MLD'} />
+            <MetaRow label="Client"             value={client ? `${client.code} — ${client.name}${client.postcode ? ` (${client.postcode})` : ''}` : null} />
             <MetaRow label="Placed"             value={order.placed} />
             <MetaRow label="PO number"          value={order.poNumber} />
             <MetaRow label="Order note"         value={order.description} />
@@ -305,22 +326,22 @@ export default function OrderView() {
             </table>
 
             {/* Totals footer */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
-              <div style={{ display: 'flex', gap: 48, fontSize: 13 }}>
+            <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10, width: 320, marginLeft: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span className="muted">Subtotal</span>
                 <span className="mono tnum muted">{fmt(subtotal)}</span>
               </div>
               {mldDiscount > 0 && (
-                <div style={{ display: 'flex', gap: 48, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                   <span style={{ color: 'rgb(16,185,129)' }}>MLD discount</span>
                   <span className="mono tnum" style={{ color: 'rgb(16,185,129)' }}>−{fmt(mldDiscount)}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 48, fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span className="muted">VAT</span>
                 <span className="muted" style={{ fontSize: 12 }}>Rated separately at invoice</span>
               </div>
-              <div style={{ display: 'flex', gap: 48, fontSize: 15, fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', marginTop: 2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                 <span>Order Total</span>
                 <span className="mono tnum">{fmt(total)}</span>
               </div>

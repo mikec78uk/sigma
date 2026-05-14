@@ -205,14 +205,14 @@ export default function BasketPanel({
         <div style={{ borderTop: '1px solid var(--border)' }}>
           {lines.map(l => (
             <BasketLine
-              key={l.sku}
+              key={l.lineId}
               line={l}
-              editing={editLineId === l.sku}
-              onToggleEdit={() => setEditLineId(editLineId === l.sku ? null : l.sku)}
-              onQty={v => setQty(l.sku, v)}
-              onUnit={v => setUnit(l.sku, v)}
-              onDesc={v => setLineDesc(l.sku, v)}
-              onRemove={() => removeLine(l.sku)}
+              editing={editLineId === l.lineId}
+              onToggleEdit={() => setEditLineId(editLineId === l.lineId ? null : l.lineId)}
+              onQty={v => setQty(l.lineId, v)}
+              onUnit={v => setUnit(l.lineId, v)}
+              onDesc={v => setLineDesc(l.lineId, v)}
+              onRemove={() => removeLine(l.lineId)}
             />
           ))}
         </div>
