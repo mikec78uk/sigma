@@ -37,7 +37,8 @@ export default function BuildOrder() {
         return { sku: cols[skuCol] || '', qty: Math.max(0, parseInt(cols[qtyCol], 10) || 0), row: i + 2 }
       }).filter(r => r.sku && r.qty > 0)
       const matched = [], unmatched = [], oos = [], insufficient = [], wrongRoute = []
-      const otherCatalogue = isNrt ? CATALOGUE : NRT_CATALOGUE
+      // Only NRT orders have wrong-route items; hospital orders accept all products
+      const otherCatalogue = isNrt ? CATALOGUE : []
       parsed.forEach(r => {
         const product = activeCatalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
         if (!product) {
@@ -71,7 +72,8 @@ export default function BuildOrder() {
     if (!order?.lines) return []
     const oos = [], ok = []
     order.lines.forEach(l => {
-      const current = CATALOGUE.find(p => p.sku === l.sku)
+      const fullCatalogue = order?.type === 'nrt' ? NRT_CATALOGUE : [...CATALOGUE, ...NRT_CATALOGUE]
+      const current = fullCatalogue.find(p => p.sku === l.sku)
       const withId = l.lineId ? l : { ...l, lineId: nextLineId() }
       if ((current?.stockState ?? l.stockState) === 'out') oos.push(withId)
       else ok.push(withId)
@@ -90,8 +92,9 @@ export default function BuildOrder() {
 
   const client = HOSPITAL_CLIENTS.find(c => c.id === order?.clientId)
   const isNrt = order?.type === 'nrt'
-  const activeCatalogue = isNrt ? NRT_CATALOGUE : CATALOGUE
-  const activeCategories = isNrt ? NRT_CATEGORIES : CATEGORIES
+  // Hospital orders include all NRT products; NRT orders are restricted to NRT catalogue only
+  const activeCatalogue = isNrt ? NRT_CATALOGUE : [...CATALOGUE, ...NRT_CATALOGUE]
+  const activeCategories = isNrt ? NRT_CATEGORIES : ['All', ...CATEGORIES.slice(1), ...NRT_CATEGORIES.slice(1)]
 
   // When the same component instance is reused for a different order (e.g. switching route type),
   // reset all state to match the incoming order so stale banners and lines don't bleed through.
@@ -99,7 +102,7 @@ export default function BuildOrder() {
   useEffect(() => {
     if (order?.draftId && order.draftId !== prevDraftIdRef.current) {
       prevDraftIdRef.current = order.draftId
-      const catalogue = order.type === 'nrt' ? NRT_CATALOGUE : CATALOGUE
+      const catalogue = order.type === 'nrt' ? NRT_CATALOGUE : [...CATALOGUE, ...NRT_CATALOGUE]
       const newLines = (order.lines || []).filter(l => {
         const current = catalogue.find(p => p.sku === l.sku)
         return (current?.stockState ?? l.stockState) !== 'out'
@@ -268,6 +271,7 @@ function handleClear() {
   const needsApproval = lines.some(l => l.unit < l.msp - 0.001)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [approverComment, setApproverComment] = useState('')
+  const [discardModalOpen, setDiscardModalOpen] = useState(false)
 
   function handleSubmit() {
     if (needsApproval) {
@@ -351,6 +355,47 @@ function handleClear() {
         </div>
       )}
 
+      {/* Discard confirmation modal */}
+      {discardModalOpen && (
+        <div className="scrim">
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal__head">
+              <div className="row between">
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Discard order</div>
+                  <h2>Save your current order?</h2>
+                </div>
+                <button className="btn btn--ghost btn--icon" onClick={() => setDiscardModalOpen(false)}>
+                  <Icon name="x" size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="modal__body">
+              <p style={{ fontSize: 13.5, color: 'var(--ink-2)', margin: 0 }}>
+                Unsaved changes will be permanently lost.
+              </p>
+            </div>
+            <div className="modal__foot" style={{ justifyContent: 'center' }}>
+              <div className="row gap-8">
+                <button
+                  className="btn"
+                  style={{ color: 'var(--bad)', borderColor: 'rgba(220,38,38,0.4)' }}
+                  onClick={() => navigate('/')}
+                >
+                  Discard without saving
+                </button>
+                <button
+                  className="btn btn--primary"
+                  onClick={() => navigate('/', { state: { savedDraft: order.draftId || 'draft' } })}
+                >
+                  <Icon name="save" size={14} /> Save as draft
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="crumbs">
         <a onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Orders</a>
         <Icon name="chevron-right" size={12} className="crumbs__sep" />
@@ -368,7 +413,7 @@ function handleClear() {
         </div>
         <div className="row gap-8">
           <button className="btn" onClick={() => navigate('/', { state: { savedDraft: order.draftId || 'draft' } })}><Icon name="save" size={14} /> Save draft</button>
-          <button className="btn btn--ghost" onClick={() => navigate('/')}>Discard</button>
+          <button className="btn btn--ghost" onClick={() => setDiscardModalOpen(true)}>Discard</button>
         </div>
       </div>
 
@@ -474,6 +519,7 @@ function handleClear() {
               manualPick={manualPick} setManualPick={setManualPick}
               onSubmit={handleSubmit}
               onClear={handleClear}
+              orderType={order?.type}
               showFoot
               hideLines
             />
@@ -534,6 +580,7 @@ function handleClear() {
               manualPick={manualPick} setManualPick={setManualPick}
               onSubmit={handleSubmit}
               onClear={handleClear}
+              orderType={order?.type}
               showFoot
             />
           </aside>
@@ -553,6 +600,7 @@ function handleClear() {
               manualPick={manualPick} setManualPick={setManualPick}
               onSubmit={() => setStep('review')}
               onClear={handleClear}
+              orderType={order?.type}
               full
             />
             <div className="row between">

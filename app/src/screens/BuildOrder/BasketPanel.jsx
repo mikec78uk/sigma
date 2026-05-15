@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fmt } from '../../utils/format'
-import { SHIPPING_AGENTS, MANUAL_PICK_REASONS } from '../../data'
+import { SHIPPING_AGENTS, MANUAL_PICK_REASONS, ORDER_TYPES } from '../../data'
 import Icon from '../../components/Icon'
 import Switch from '../../components/Switch'
 import BasketLine from './BasketLine'
@@ -33,9 +33,11 @@ export default function BasketPanel({
   agent, setAgent,
   manualPick, setManualPick,
   onSubmit, onClear,
+  orderType,
   showFoot, full,
   hideLines,
 }) {
+  const depot = ORDER_TYPES.find(t => t.id === orderType)?.depot ?? null
   const unitCount = lines.reduce((s, l) => s + l.qty, 0)
   const hasLines = lines.length > 0
   const mldDiscount = lines.reduce((s, l) => {
@@ -63,6 +65,24 @@ export default function BasketPanel({
           </button>
         )}
       </div>
+
+      {depot && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '9px 16px',
+          background: '#f0f9ff', borderBottom: '1px solid #bae6fd',
+        }}>
+          <Icon name="package" size={13} style={{ color: '#0369a1', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#0c4a6e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {depot.name}
+            </div>
+            <div style={{ fontSize: 11, color: '#0369a1', marginTop: 1 }}>
+              {depot.location} · <span className="mono">{depot.code}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!hasLines && (
         <div className="basket-empty">

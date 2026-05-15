@@ -43,7 +43,8 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef(null)
 
-  const otherCatalogue = orderType === 'nrt' ? CATALOGUE : NRT_CATALOGUE
+  // Only NRT orders have wrong-route items; hospital orders accept all products
+  const otherCatalogue = orderType === 'nrt' ? CATALOGUE : []
   const otherType = ORDER_TYPES.find(t => t.id !== orderType)
   const currentType = ORDER_TYPES.find(t => t.id === orderType)
 

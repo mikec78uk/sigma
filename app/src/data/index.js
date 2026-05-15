@@ -9,7 +9,7 @@ export const HOSPITAL_CLIENTS = [
 
 export const ORDER_TYPES = [
   { id: 'hospital', title: 'Hospital / Bulk / MLD',  short: 'Hospital', desc: "Standard order against the customer's hospital pricing schedule.", available: true  },
-  { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', short: 'NRT', desc: 'Items dispatched from a dedicated depot.', available: true },
+  { id: 'nrt',      title: 'Nicotine Replacement Therapy (NRT)', short: 'NRT', desc: 'Items dispatched from a dedicated depot.', available: true, depot: { name: 'Sigma NRT Distribution Centre', location: 'Runcorn, Cheshire', code: 'NRT-RC1' } },
 ]
 
 export const SHIPPING_AGENTS = [
