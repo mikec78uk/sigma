@@ -618,7 +618,7 @@ export default function QuickEntryPanel({
                             <div style={{ position: 'relative', flex: 1 }}>
                               <input
                                 className="input"
-                                placeholder="Line note (visible on SAP order line)…"
+                                placeholder="Line note…"
                                 value={l.description || ''}
                                 onChange={e => setLineDesc(l.lineId, e.target.value)}
                                 style={{ fontSize: 12.5, width: '100%', paddingRight: l.description ? 28 : undefined }}
