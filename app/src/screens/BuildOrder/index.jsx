@@ -147,11 +147,7 @@ export default function BuildOrder() {
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0)
-  const mldDiscount = lines.reduce((s, l) => {
-    const pct = parseFloat(l.mld)
-    return s + (isNaN(pct) || pct <= 0 ? 0 : l.unit * l.qty * pct / 100)
-  }, 0)
-  const total = subtotal - mldDiscount
+  const total = subtotal
 
   function addToBasket(p) {
     // Variant products can have multiple lines (one per variant); non-variant products increment
@@ -163,10 +159,13 @@ export default function BuildOrder() {
         return
       }
     }
+    const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     setLines([{
       lineId: nextLineId(),
-      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
-      unit: p.promo || p.msp, qty: 1, description: '',
+      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
+      discount: p.discount || 0,
+      unit: listPrice,
+      qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: '', mld: '',
     }, ...lines])
@@ -181,11 +180,13 @@ export default function BuildOrder() {
         return
       }
     }
-    const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
+    const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     setLines([{
       lineId: nextLineId(),
-      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo,
-      unit: unitPrice, qty: 1, description: '',
+      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
+      discount: p.discount || 0,
+      unit: listPrice,
+      qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: '', mld: '',
     }, ...lines])
@@ -196,7 +197,14 @@ export default function BuildOrder() {
   }
 
   function setMld(lineId, mld) {
-    setLines(lines.map(l => l.lineId === lineId ? { ...l, mld } : l))
+    setLines(lines.map(l => {
+      if (l.lineId !== lineId) return l
+      const mldPct = parseFloat(mld)
+      const basePrice = l.listPrice || l.msp
+      const totalPct = (l.discount || 0) + (isNaN(mldPct) || mldPct < 0 ? 0 : mldPct)
+      const newUnit = Math.round(basePrice * (1 - totalPct / 100) * 100) / 100
+      return { ...l, mld, unit: Math.max(0, newUnit) }
+    }))
   }
 
   function setQty(lineId, qty) {
@@ -223,7 +231,8 @@ export default function BuildOrder() {
         if (idx >= 0) {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: p.promo ?? p.msp, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: listPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -244,8 +253,8 @@ export default function BuildOrder() {
         if (idx >= 0) {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
-          const unitPrice = Math.ceil(p.msp * 1.25 * 100) / 100
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, promo: p.promo, unit: unitPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: listPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -417,6 +426,36 @@ function handleClear() {
         </div>
       </div>
 
+      {/* EDI price mismatch banner */}
+      {order.status === 'edi-error' && order.ediErrors?.length > 0 && (
+        <div style={{ marginBottom: 20, background: '#fff7ed', border: '1px solid rgba(194,65,12,0.3)', borderRadius: 10, padding: '12px 16px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <Icon name="alert" size={15} style={{ color: '#c2410c', flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5, color: '#7c2d12', marginBottom: 4 }}>
+                EDI price mismatch — review and resubmit
+              </div>
+              <div style={{ fontSize: 13, color: '#92400e', marginBottom: 10 }}>
+                This order was received automatically but could not be processed. The prices below were sent by the client system and don't match Sigma's current rates. Review and correct the highlighted lines before resubmitting.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {order.ediErrors.map((e, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
+                    <span className="mono" style={{ fontSize: 11.5, background: 'rgba(194,65,12,0.08)', border: '1px solid rgba(194,65,12,0.25)', borderRadius: 4, padding: '1px 6px', color: '#7c2d12', flexShrink: 0 }}>
+                      {e.sku}
+                    </span>
+                    <span style={{ color: '#92400e', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</span>
+                    <span className="mono" style={{ fontSize: 12, color: '#7c2d12', flexShrink: 0 }}>
+                      Client sent {fmt(e.orderedPrice)} · System price {fmt(e.systemPrice)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rejection notice banner */}
       {order.rejectionNote && (
         <div style={{ marginBottom: 20, background: '#fff5f5', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -503,6 +542,7 @@ function handleClear() {
             wrongRouteImport={wrongRouteImport}
             onDismissWrongRoute={() => setWrongRouteImport([])}
             orderType={order?.type ?? 'hospital'}
+            ediErrors={order?.ediErrors || []}
             onFileSelect={(file) => { setImportInitialFile(file); setShowImport(true) }}
             onImportClick={() => { setImportInitialFile(null); setShowImport(true) }}
           />

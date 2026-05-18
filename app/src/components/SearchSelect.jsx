@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import Icon from './Icon'
+import TypeBadge from './TypeBadge'
 
 /**
- * options: [{ value, label, meta?, sub? }]
+ * options: [{ value, label, meta?, sub?, tag? }]
  * allLabel: label shown for the empty/all option (default "All")
  */
 export default function SearchSelect({ value, onChange, options, allLabel = 'All', width = 300 }) {
@@ -87,8 +88,11 @@ export default function SearchSelect({ value, onChange, options, allLabel = 'All
         onClick={() => setOpen(v => !v)}
         onKeyDown={handleKeyDown}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {selected ? (selected.meta ? `${selected.meta} · ${selected.label}` : selected.label) : allLabel}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', minWidth: 0 }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selected ? (selected.meta ? `${selected.meta} · ${selected.label}` : selected.label) : allLabel}
+          </span>
+          {selected?.tag && <TypeBadge type={selected.tag} style={{ fontSize: 10.5, padding: '1px 6px' }} />}
         </span>
         <Icon name="chevron-down" size={13} style={{ flexShrink: 0, marginLeft: 6, color: 'var(--ink-3)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
       </button>
@@ -137,21 +141,27 @@ export default function SearchSelect({ value, onChange, options, allLabel = 'All
                 key={o.value}
                 onClick={() => select(o.value)}
                 style={{
-                  padding: '9px 12px', cursor: 'pointer',
+                  padding: '11px 14px', cursor: 'pointer',
                   background: cursor === i ? 'var(--surface-2)' : (value === o.value ? 'var(--surface-3)' : 'transparent'),
                   borderBottom: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', gap: 10,
+                  display: 'flex', alignItems: 'center', gap: 14,
                 }}
                 onMouseEnter={() => setCursor(i)}
               >
                 {o.meta && (
-                  <span className="mono muted" style={{ fontSize: 11.5, flexShrink: 0 }}>{o.meta}</span>
+                  <span className="mono muted" style={{ fontSize: 11.5, flexShrink: 0, width: 64 }}>{o.meta}</span>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5 }}>{o.label}</div>
-                  {o.sub && <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>{o.sub}</div>}
+                  <div style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</div>
+                  {o.sub && <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{o.sub}</div>}
                 </div>
-                {value === o.value && <Icon name="check" size={14} style={{ color: 'var(--ink)', flexShrink: 0 }} />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  {o.tag && <TypeBadge type={o.tag} />}
+                  {value === o.value
+                    ? <Icon name="check" size={14} style={{ color: 'var(--ink)' }} />
+                    : <span style={{ width: 14 }} />
+                  }
+                </div>
               </div>
             ))}
 

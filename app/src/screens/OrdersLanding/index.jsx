@@ -6,6 +6,7 @@ import Icon from '../../components/Icon'
 import Pager from '../../components/Pager'
 import StatusBadge from '../../components/StatusBadge'
 import SearchSelect from '../../components/SearchSelect'
+import TypeBadge from '../../components/TypeBadge'
 import KPI from './KPI'
 import NewOrderModal from '../NewOrderModal'
 import Toast from '../../components/Toast'
@@ -165,21 +166,26 @@ export default function OrdersLanding() {
     submitted: scopedOrders.filter(o => o.status === 'submitted' || o.status === 'on-hold').length,
     drafts:    scopedOrders.filter(o => o.status === 'draft').length,
     rejected:  scopedOrders.filter(o => o.status === 'rejected').length,
+    edi:       scopedOrders.filter(o => o.edi).length,
+    ediErrors: scopedOrders.filter(o => o.status === 'edi-error').length,
   }), [scopedOrders])
 
-  const STATUS_ORDER = { 'pending-approval': 0, rejected: 1, draft: 2, submitted: 3, 'on-hold': 3 }
+  const STATUS_ORDER = { 'edi-error': 0, 'pending-approval': 1, rejected: 2, draft: 3, submitted: 4, 'on-hold': 4 }
 
   const filtered = useMemo(() => {
     let list = scopedOrders
-    if (tab === 'pending')   list = list.filter(o => o.status === 'pending-approval')
-    if (tab === 'submitted') list = list.filter(o => o.status === 'submitted' || o.status === 'on-hold')
-    if (tab === 'drafts')    list = list.filter(o => o.status === 'draft')
-    if (tab === 'rejected')  list = list.filter(o => o.status === 'rejected')
+    if (tab === 'pending')    list = list.filter(o => o.status === 'pending-approval')
+    if (tab === 'submitted')  list = list.filter(o => o.status === 'submitted' || o.status === 'on-hold')
+    if (tab === 'drafts')     list = list.filter(o => o.status === 'draft')
+    if (tab === 'rejected')   list = list.filter(o => o.status === 'rejected')
+    if (tab === 'edi')        list = list.filter(o => o.edi)
+    if (tab === 'edi-errors') list = list.filter(o => o.status === 'edi-error')
     if (q.trim()) {
       const s = q.toLowerCase()
       list = list.filter(o =>
         o.id.toLowerCase().includes(s) ||
         o.ref.toLowerCase().includes(s) ||
+        (o.poNumber || '').toLowerCase().includes(s) ||
         (HOSPITAL_CLIENTS.find(c => c.id === o.clientId)?.name || '').toLowerCase().includes(s)
       )
     }
@@ -283,10 +289,66 @@ export default function OrdersLanding() {
     })
   }
 
-  function handleNewOrder() {
-    navigate('/orders/new', {
-      state: { preselectedClientId: selectedClient?.id ?? null },
+  function editEdiError(o) {
+    const catalogue = o.type === 'nrt' ? NRT_CATALOGUE : CATALOGUE
+    const priority = o.type === 'nrt'
+      ? ['NC-10010', 'NC-10003', 'NC-20003', 'NC-20011', 'NC-30002', 'NC-40006', 'NC-50003', 'NC-60001']
+      : ['SC-04128', 'SC-07811', 'SC-05010', 'SC-05011', 'SC-05123', 'SC-06502', 'SC-08612', 'SC-07815']
+    const sampleNotes = ['Earliest expiry date required', 'Short-dated stock acceptable', null, null, null, null, null, null]
+    const skus = priority.slice(0, Math.min(o.lines, 8))
+    const seedLines = skus.map((sku, i) => {
+      const p = catalogue.find(c => c.sku === sku) || catalogue[i]
+      const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+      return {
+        sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
+        discount: p.discount || 0,
+        unit: listPrice,
+        qty: Math.max(1, (i + 1) * 2),
+        description: sampleNotes[i] || '', stock: p.stock, stockState: p.stockState,
+        variant: '', mld: '',
+      }
     })
+    navigate(`/orders/${o.id}/build`, {
+      state: {
+        order: {
+          draftId: o.id,
+          clientId: o.clientId,
+          type: o.type,
+          status: 'edi-error',
+          lines: seedLines,
+          description: o.ref || '',
+          poNumber: o.poNumber || '',
+          shipDate: o.shipDate || '',
+          agent: o.agent || 'DPDP-NXT',
+          manualPick: { enabled: false, reasonCode: '', note: '' },
+          ediErrors: o.ediErrors || [],
+        },
+      },
+    })
+  }
+
+  function handleNewOrder() {
+    if (selectedClient) {
+      // Client already chosen — skip the modal and go straight to build
+      const type = selectedClient.type ?? 'hospital'
+      const draftId = 'DR-2026-00' + Math.floor(300 + Math.random() * 99)
+      navigate(`/orders/${draftId}/build`, {
+        state: {
+          order: {
+            draftId,
+            clientId: selectedClient.id,
+            type,
+            status: 'draft',
+            lines: [],
+            description: '',
+            agent: 'DPDP-NXT',
+            manualPick: { enabled: false, reasonCode: '', note: '' },
+          },
+        },
+      })
+    } else {
+      navigate('/orders/new')
+    }
   }
 
   return (
@@ -305,9 +367,9 @@ export default function OrdersLanding() {
           <SearchSelect
             value={clientFilter}
             onChange={v => { setClientFilter(v); setTab('all'); setPage(1) }}
-            options={HOSPITAL_CLIENTS.map(c => ({ value: c.id, label: c.name, meta: c.code, sub: c.postcode }))}
+            options={HOSPITAL_CLIENTS.map(c => ({ value: c.id, label: c.name, meta: c.code, sub: c.postcode, tag: c.type }))}
             allLabel="All clients"
-            width={300}
+            width={450}
           />
 <span className="label" style={{ whiteSpace: 'nowrap' }}>Period</span>
           <select
@@ -337,23 +399,27 @@ export default function OrdersLanding() {
       <div className="panel">
         <div className="panel__head" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div className="row gap-8">
-            <button className="btn"><Icon name="filter" size={14} /> Filters</button>
             <div className="search" style={{ width: 320 }}>
               <span className="search__icon"><Icon name="search" size={15} /></span>
-              <input className="input" placeholder="Search order ID or reference…" value={q} onChange={e => { setQ(e.target.value); setPage(1) }} />
+              <input className="input" placeholder="Search order ID, reference or PO number…" value={q} onChange={e => { setQ(e.target.value); setPage(1) }} />
             </div>
           </div>
           <div className="row gap-8" style={{ marginLeft: 'auto', alignItems: 'center' }}>
             <button className="btn btn--ghost" style={{ padding: '0 4px', gap: 5, color: 'var(--ink-3)', fontSize: 13 }}><Icon name="doc" size={14} /> Export</button>
             <div className="seg">
-              <button className={'seg__btn ' + (tab === 'all'       ? 'active' : '')} onClick={() => { setTab('all');       setPage(1) }}>All <span className="muted-2">· {counts.all}</span></button>
-              <button className={'seg__btn ' + (tab === 'pending'   ? 'active' : '')} onClick={() => { setTab('pending');   setPage(1) }}>
+              <button className={'seg__btn ' + (tab === 'all'        ? 'active' : '')} onClick={() => { setTab('all');        setPage(1) }}>All <span className="muted-2">· {counts.all}</span></button>
+              <button className={'seg__btn ' + (tab === 'edi-errors' ? 'active' : '')} onClick={() => { setTab('edi-errors'); setPage(1) }}>
+                EDI errors
+                {counts.ediErrors > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 5, minWidth: 18, height: 18, borderRadius: 9, background: tab === 'edi-errors' ? '#c2410c' : '#fff7ed', color: tab === 'edi-errors' ? '#fff' : '#c2410c', fontSize: 11, fontWeight: 700, padding: '0 5px' }}>{counts.ediErrors}</span>}
+              </button>
+              <button className={'seg__btn ' + (tab === 'rejected'   ? 'active' : '')} onClick={() => { setTab('rejected');   setPage(1) }}>Rejected <span className="muted-2">· {counts.rejected}</span></button>
+              <button className={'seg__btn ' + (tab === 'pending'    ? 'active' : '')} onClick={() => { setTab('pending');    setPage(1) }}>
                 Pending approval
                 {counts.pending > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 5, minWidth: 18, height: 18, borderRadius: 9, background: tab === 'pending' ? '#5b21b6' : '#ede9fe', color: tab === 'pending' ? '#fff' : '#5b21b6', fontSize: 11, fontWeight: 700, padding: '0 5px' }}>{counts.pending}</span>}
               </button>
-              <button className={'seg__btn ' + (tab === 'submitted' ? 'active' : '')} onClick={() => { setTab('submitted'); setPage(1) }}>Submitted <span className="muted-2">· {counts.submitted}</span></button>
-              <button className={'seg__btn ' + (tab === 'rejected'  ? 'active' : '')} onClick={() => { setTab('rejected');  setPage(1) }}>Rejected <span className="muted-2">· {counts.rejected}</span></button>
-              <button className={'seg__btn ' + (tab === 'drafts'    ? 'active' : '')} onClick={() => { setTab('drafts');    setPage(1) }}>Drafts <span className="muted-2">· {counts.drafts}</span></button>
+              <button className={'seg__btn ' + (tab === 'drafts'     ? 'active' : '')} onClick={() => { setTab('drafts');     setPage(1) }}>Drafts <span className="muted-2">· {counts.drafts}</span></button>
+              <button className={'seg__btn ' + (tab === 'edi'        ? 'active' : '')} onClick={() => { setTab('edi');        setPage(1) }}>EDI <span className="muted-2">· {counts.edi}</span></button>
+              <button className={'seg__btn ' + (tab === 'submitted'  ? 'active' : '')} onClick={() => { setTab('submitted');  setPage(1) }}>Submitted <span className="muted-2">· {counts.submitted}</span></button>
             </div>
           </div>
         </div>
@@ -363,14 +429,14 @@ export default function OrdersLanding() {
             <thead>
               <tr>
                 {[
-                  { col: 'id',     label: 'Order',     cls: ''      },
-                  { col: 'client', label: 'Client',    cls: ''      },
-                  // { col: null,     label: 'Type',      cls: ''      },
-                  { col: 'placed', label: 'Placed',    cls: ''      },
-                  { col: 'po',     label: 'PO number', cls: ''      },
-                  { col: 'lines',  label: 'Lines',     cls: 'right' },
-                  { col: 'total',  label: 'Total',     cls: 'right' },
-                  { col: 'status', label: 'Status',    cls: ''      },
+                  { col: 'id',     label: 'Order',     cls: ''       },
+                  { col: 'client', label: 'Client',    cls: ''       },
+                  { col: 'placed', label: 'Placed',    cls: ''       },
+                  { col: 'po',     label: 'PO number', cls: ''       },
+                  { col: 'lines',  label: 'Lines',     cls: 'right'  },
+                  { col: 'total',  label: 'Total',     cls: 'right'  },
+                  { col: 'status', label: 'Status',    cls: ''       },
+                  { col: null,     label: 'EDI',       cls: 'center' },
                 ].map(({ col, label, cls }) => (
                   <th
                     key={label}
@@ -391,10 +457,13 @@ export default function OrdersLanding() {
                   <>
                     <tr
                       key={o.id}
-                      onClick={() => o.status === 'rejected' ? editRejected(o) : openOrder(o)}
+                      onClick={() => o.status === 'rejected' ? editRejected(o) : o.status === 'edi-error' ? editEdiError(o) : openOrder(o)}
                       style={{
                         cursor: 'pointer',
-                        background: o.status === 'pending-approval' ? '#faf5ff' : o.status === 'rejected' ? 'rgba(239,68,68,0.03)' : undefined,
+                        background: o.status === 'pending-approval' ? '#faf5ff'
+                                  : o.status === 'rejected'         ? 'rgba(239,68,68,0.03)'
+                                  : o.status === 'edi-error'        ? 'rgba(251,146,60,0.06)'
+                                  : undefined,
                       }}
                     >
                       <td>
@@ -405,9 +474,7 @@ export default function OrdersLanding() {
                       </td>
                       {/* Type column hidden — uncomment header { col: null, label: 'Type' } to restore
                       <td>
-                        <span className="badge" style={o.type === 'nrt' ? { background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' } : {}}>
-                          {o.type === 'nrt' ? 'NRT' : 'Hospital'}
-                        </span>
+                        <TypeBadge type={o.type ?? 'hospital'} />
                       </td>
                       */}
                       <td className="mono" style={{ fontSize: 12 }}>{o.placed?.split(' ')[0]}</td>
@@ -473,6 +540,11 @@ export default function OrdersLanding() {
                           )}
                         </div>
                       </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {o.edi && (
+                          <span title="EDI order" style={{ fontSize: 14, color: '#15803d', fontWeight: 700 }}>✓</span>
+                        )}
+                      </td>
                       <td className="right">
                         {o.status === 'draft' && (
                           <button className="btn btn--sm" onClick={e => { e.stopPropagation(); openOrder(o) }}>Continue</button>
@@ -482,6 +554,9 @@ export default function OrdersLanding() {
                         )}
                         {o.status === 'rejected' && (
                           <button className="btn btn--sm btn--primary" onClick={e => { e.stopPropagation(); editRejected(o) }}>Edit &amp; resubmit</button>
+                        )}
+                        {o.status === 'edi-error' && (
+                          <button className="btn btn--sm btn--primary" style={{ background: '#c2410c', borderColor: '#c2410c' }} onClick={e => { e.stopPropagation(); editEdiError(o) }}>Fix &amp; resubmit</button>
                         )}
                         {o.status === 'pending-approval' && (
                           <div className="row gap-6" style={{ justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>

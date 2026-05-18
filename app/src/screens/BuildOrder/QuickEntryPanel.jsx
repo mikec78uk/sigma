@@ -3,6 +3,7 @@ import { fmt } from '../../utils/format'
 import { ORDER_TYPES } from '../../data'
 import Icon from '../../components/Icon'
 import StockDot from '../../components/StockDot'
+import TypeBadge from '../../components/TypeBadge'
 import VariantSelect from './VariantSelect'
 
 export default function QuickEntryPanel({
@@ -24,6 +25,7 @@ export default function QuickEntryPanel({
   wrongRouteImport,
   onDismissWrongRoute,
   orderType = 'hospital',
+  ediErrors = [],
   onStartOtherOrder,
   onFileSelect,
   onImportClick,
@@ -128,8 +130,9 @@ export default function QuickEntryPanel({
         case 'name':  av = a.name;       bv = b.name;       break
         case 'pack':  av = a.pack;       bv = b.pack;       break
         case 'stock': av = a.stockState; bv = b.stockState; break
-        case 'msp':   av = a.msp;        bv = b.msp;        break
-        case 'unit':  av = a.unit;       bv = b.unit;       break
+        case 'msp':      av = a.msp;           bv = b.msp;           break
+        case 'discount': av = a.discount || 0; bv = b.discount || 0; break
+        case 'unit':     av = a.unit;          bv = b.unit;          break
         case 'qty':   av = a.qty;        bv = b.qty;        break
         default:      return 0
       }
@@ -162,18 +165,20 @@ export default function QuickEntryPanel({
   }
 
   const hasItems = lines.length > 0
+  const ediErrorSkus = new Set((ediErrors || []).map(e => e.sku))
 
   const hasVariantLines = lines.some(l => l.variants?.length > 0)
 
   const COLS = [
-    { col: 'sku',     label: 'Code',       right: false },
-    { col: 'name',    label: 'Product',    right: false },
+    { col: 'sku',           label: 'Code',        right: false },
+    { col: 'name',          label: 'Product',     right: false },
     ...(hasVariantLines ? [{ col: 'variant', label: 'Variant', right: false }] : []),
-    { col: 'stock',   label: 'Stock',      right: false },
-    { col: 'msp',     label: 'MSP',        right: true  },
-    { col: 'unit',    label: 'Unit Price', right: true  },
-    { col: 'mld',     label: 'MLD %',      right: true  },
-    { col: 'qty',     label: 'Qty',        right: true  },
+    { col: 'qty',           label: 'Qty',         right: true  },
+    { col: 'msp',           label: 'MSP',         right: true  },
+    { col: 'discount',      label: 'Disc.',        right: true  },
+    { col: 'mld',           label: 'MLD',          right: true  },
+    { col: 'unit',          label: 'Unit Price',  right: true  },
+    { col: 'totalDiscount', label: 'Total Disc.', right: true  },
   ]
 
   return (
@@ -186,15 +191,7 @@ export default function QuickEntryPanel({
           )}
         </div>
         <div className="row gap-8" style={{ alignItems: 'center' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', fontSize: 11.5, fontWeight: 600,
-            padding: '2px 8px', borderRadius: 4,
-            background: orderType === 'nrt' ? '#f0f9ff' : '#f0fdf4',
-            color: orderType === 'nrt' ? '#0369a1' : '#166534',
-            border: `1px solid ${orderType === 'nrt' ? '#bae6fd' : '#bbf7d0'}`,
-          }}>
-            {orderType === 'nrt' ? 'NRT' : 'Hospital / Bulk / MLD'}
-          </span>
+          <TypeBadge type={orderType ?? 'hospital'} style={{ fontSize: 11.5, padding: '2px 8px' }} />
           <span className="badge badge--draft">Draft</span>
           {hasItems && (
             <button className="btn" onClick={onImportClick}>
@@ -425,7 +422,7 @@ export default function QuickEntryPanel({
       )}
       {hasItems && (
         <div className="panel__body panel__body--flush" style={{ overflowX: 'auto' }}>
-          <table className="tbl" style={{ minWidth: 780 }}>
+          <table className="tbl" style={{ minWidth: 920 }}>
             <thead>
               <tr>
                 {COLS.map(({ col, label, right }) => (
@@ -452,13 +449,22 @@ export default function QuickEntryPanel({
                   : l.unit < l.msp - 0.001
                 const isOos = l.stockState === 'out'
                 const hasMld = l.mld !== '' && !isNaN(parseFloat(l.mld)) && parseFloat(l.mld) > 0
+                const hasEdiError = ediErrorSkus.has(l.sku)
                 return (
                   <Fragment key={l.lineId}>
-                    <tr style={isOos ? { background: 'rgba(239,68,68,0.04)' } : hasMld ? { background: 'rgba(16,185,129,0.06)' } : {}}>
+                    <tr style={hasEdiError ? { background: 'rgba(251,146,60,0.08)' } : isOos ? { background: 'rgba(239,68,68,0.04)' } : hasMld ? { background: 'rgba(16,185,129,0.06)' } : {}}>
                       <td className="mono muted" style={{ fontSize: 12 }}>{l.sku}</td>
                       <td style={{ maxWidth: 220 }}>
                         <div style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
-                        <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>{l.pack}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                          <span className="muted" style={{ fontSize: 11.5 }}>{l.pack}</span>
+                          <StockDot state={l.stockState} />
+                        </div>
+                        {hasEdiError && (
+                          <div style={{ fontSize: 11, color: '#c2410c', marginTop: 2, whiteSpace: 'nowrap' }}>
+                            ⚠ EDI price mismatch — verify unit price
+                          </div>
+                        )}
                         {isOos && (
                           <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, whiteSpace: 'nowrap' }}>
                             ⚠ Out of stock — fulfilment not guaranteed
@@ -479,28 +485,27 @@ export default function QuickEntryPanel({
                           )}
                         </td>
                       )}
-                      <td style={{ whiteSpace: 'nowrap' }}><StockDot state={l.stockState} /></td>
-                      <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
-                      <td className="right" style={{ minWidth: 88 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
-                            <input
-                              className="input"
-                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
-                              value={displayUnit}
-                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
-                              onFocus={() => startEditUnit(l.lineId, l.unit)}
-                              onBlur={() => commitUnit(l)}
-                            />
-                          </div>
-                          {isBelowMsp && (
-                            <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
-                              Requires approval
-                            </div>
-                          )}
-                        </div>
+                      {/* Qty */}
+                      <td className="right" style={{ minWidth: 60 }}>
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          style={{ width: 50, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
+                          value={l.qty}
+                          onChange={e => {
+                            const v = parseInt(e.target.value, 10)
+                            if (!isNaN(v) && v > 0) setQty(l.lineId, v)
+                          }}
+                        />
                       </td>
+                      {/* MSP */}
+                      <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
+                      {/* Disc. — read-only catalogue discount % */}
+                      <td className="right mono tnum" style={{ fontSize: 12.5, color: l.discount > 0 ? '#059669' : 'var(--ink-3)' }}>
+                        {l.discount > 0 ? `${l.discount}%` : '—'}
+                      </td>
+                      {/* MLD — editable additional discount % */}
                       <td className="right" style={{ minWidth: 80 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
                           <input
@@ -526,19 +531,37 @@ export default function QuickEntryPanel({
                           <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>%</span>
                         </div>
                       </td>
-                      <td className="right" style={{ minWidth: 60 }}>
-                        <input
-                          className="input"
-                          type="number"
-                          min="1"
-                          style={{ width: 50, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
-                          value={l.qty}
-                          onChange={e => {
-                            const v = parseInt(e.target.value, 10)
-                            if (!isNaN(v) && v > 0) setQty(l.lineId, v)
-                          }}
-                        />
+                      {/* Unit Price — editable */}
+                      <td className="right" style={{ minWidth: 88 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
+                            <input
+                              className="input"
+                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
+                              value={displayUnit}
+                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
+                              onFocus={() => startEditUnit(l.lineId, l.unit)}
+                              onBlur={() => commitUnit(l)}
+                            />
+                          </div>
+                          {isBelowMsp && (
+                            <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
+                              Requires approval
+                            </div>
+                          )}
+                        </div>
                       </td>
+                      {/* Total Disc. — read-only sum of catalogue discount + MLD */}
+                      {(() => {
+                        const mldPct = parseFloat(l.mld) || 0
+                        const totalPct = (l.discount || 0) + mldPct
+                        return (
+                          <td className="right mono tnum" style={{ fontSize: 12.5, color: totalPct > 0 ? '#059669' : 'var(--ink-3)' }}>
+                            {totalPct > 0 ? `${totalPct}%` : '—'}
+                          </td>
+                        )
+                      })()}
                       <td>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                           <div style={{ position: 'relative' }}>
@@ -590,7 +613,7 @@ export default function QuickEntryPanel({
                     </tr>
                     {noteOpen && (
                       <tr key={l.lineId + '-note'}>
-                        <td colSpan={hasVariantLines ? 9 : 8} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
+                        <td colSpan={hasVariantLines ? 10 : 9} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
                               <input

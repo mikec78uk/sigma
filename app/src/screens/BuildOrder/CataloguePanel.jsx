@@ -97,8 +97,8 @@ export default function CataloguePanel({
                 }
               </div>
               <div className="right">
-                <div className="mono tnum" style={{ fontWeight: 600 }}>{fmt(p.promo ?? p.msp)}</div>
-                {p.promo && <div className="mono muted" style={{ fontSize: 11, textDecoration: 'line-through' }}>{fmt(p.msp)}</div>}
+                <div className="mono tnum" style={{ fontWeight: 600 }}>{fmt(p.unit)}</div>
+                {p.listPrice && <div className="mono muted" style={{ fontSize: 11, textDecoration: 'line-through' }}>{fmt(p.listPrice)}</div>}
               </div>
               <div className="row end gap-8">
                 {inBasket ? (
