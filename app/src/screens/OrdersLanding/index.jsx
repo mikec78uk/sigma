@@ -430,22 +430,15 @@ export default function OrdersLanding() {
               <tr>
                 {[
                   { col: 'id',     label: 'Order',     cls: ''       },
+                  { col: null,     label: 'EDI',       cls: 'center' },
                   { col: 'client', label: 'Client',    cls: ''       },
                   { col: 'placed', label: 'Placed',    cls: ''       },
                   { col: 'po',     label: 'PO number', cls: ''       },
                   { col: 'lines',  label: 'Lines',     cls: 'right'  },
                   { col: 'total',  label: 'Total',     cls: 'right'  },
                   { col: 'status', label: 'Status',    cls: ''       },
-                  { col: null,     label: 'EDI',       cls: 'center' },
                 ].map(({ col, label, cls }) => (
-                  <th
-                    key={label}
-                    className={cls}
-                    onClick={col ? () => toggleSort(col) : undefined}
-                    style={col ? { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' } : {}}
-                  >
-                    {label}{col && <SortCaret col={col} />}
-                  </th>
+                  <th key={label} className={cls}>{label}</th>
                 ))}
                 <th className="right" style={{ width: 160 }}>Actions</th>
               </tr>
@@ -468,6 +461,11 @@ export default function OrdersLanding() {
                     >
                       <td>
                         <div className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{o.id}</div>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {o.edi && (
+                          <span title="EDI order" style={{ fontSize: 14, color: '#15803d', fontWeight: 700 }}>✓</span>
+                        )}
                       </td>
                       <td>
                         <div><span className="mono" style={{ fontSize: 12, marginRight: 6 }}>{client?.code}</span>{client?.name}{client?.postcode && <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>({client.postcode})</span>}</div>
@@ -539,11 +537,6 @@ export default function OrdersLanding() {
                             </div>
                           )}
                         </div>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {o.edi && (
-                          <span title="EDI order" style={{ fontSize: 14, color: '#15803d', fontWeight: 700 }}>✓</span>
-                        )}
                       </td>
                       <td className="right">
                         {o.status === 'draft' && (
