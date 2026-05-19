@@ -38,6 +38,7 @@ export default function QuickEntryPanel({
   const [openNotes, setOpenNotes] = useState({})
   const [editingUnit, setEditingUnit] = useState({})
   const [hoveredNote, setHoveredNote] = useState(null)
+  const [hoveredReset, setHoveredReset] = useState(null)
   const inputRef = useRef(null)
   const dropFileRef = useRef(null)
   const variantRefs = useRef({})
@@ -532,26 +533,61 @@ export default function QuickEntryPanel({
                         </div>
                       </td>
                       {/* Unit Price — editable */}
-                      <td className="right" style={{ minWidth: 88 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
-                            <input
-                              className="input"
-                              style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
-                              value={displayUnit}
-                              onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
-                              onFocus={() => startEditUnit(l.lineId, l.unit)}
-                              onBlur={() => commitUnit(l)}
-                            />
-                          </div>
-                          {isBelowMsp && (
-                            <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
-                              Requires approval
+                      {(() => {
+                        const mldPct = parseFloat(l.mld) || 0
+                        const calculatedUnit = Math.round((l.listPrice || l.msp) * (1 - ((l.discount || 0) + mldPct) / 100) * 100) / 100
+                        const liveVal = unitDraft !== undefined ? parseFloat(unitDraft) : l.unit
+                        const unitChanged = Math.abs((isNaN(liveVal) ? l.unit : liveVal) - calculatedUnit) > 0.001
+                        return (
+                          <td className="right" style={{ minWidth: 100 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
+                                <input
+                                  className="input"
+                                  style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
+                                  value={displayUnit}
+                                  onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
+                                  onFocus={() => startEditUnit(l.lineId, l.unit)}
+                                  onBlur={() => commitUnit(l)}
+                                />
+                                {unitChanged && (
+                                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    <button
+                                      onMouseDown={e => { e.preventDefault(); setUnit(l.lineId, calculatedUnit); setEditingUnit(prev => { const { [l.lineId]: _, ...rest } = prev; return rest }); setHoveredReset(null) }}
+                                      onMouseEnter={() => setHoveredReset(l.lineId)}
+                                      onMouseLeave={() => setHoveredReset(null)}
+                                      style={{ background: 'none', border: 'none', padding: '2px 3px', cursor: 'pointer', color: hoveredReset === l.lineId ? 'var(--ink)' : 'var(--ink-3)', lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                                    >
+                                      <Icon name="undo" size={13} />
+                                    </button>
+                                    {hoveredReset === l.lineId && (
+                                      <div style={{
+                                        position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
+                                        background: 'var(--ink)', color: '#fff', fontSize: 12, lineHeight: 1.4,
+                                        padding: '5px 9px', borderRadius: 6, whiteSpace: 'nowrap',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.18)', pointerEvents: 'none',
+                                      }}>
+                                        Reset to {fmt(calculatedUnit)}
+                                        <div style={{
+                                          position: 'absolute', top: '100%', right: 8,
+                                          borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                                          borderTop: '5px solid var(--ink)',
+                                        }} />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {isBelowMsp && (
+                                <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
+                                  Requires approval
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </td>
+                          </td>
+                        )
+                      })()}
                       {/* Total Disc. — read-only sum of catalogue discount + MLD */}
                       {(() => {
                         const mldPct = parseFloat(l.mld) || 0
