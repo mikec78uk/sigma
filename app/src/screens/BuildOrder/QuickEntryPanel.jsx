@@ -176,9 +176,10 @@ export default function QuickEntryPanel({
     ...(hasVariantLines ? [{ col: 'variant', label: 'Variant', right: false }] : []),
     { col: 'qty',           label: 'Qty',         right: true  },
     { col: 'msp',           label: 'MSP',         right: true  },
+    { col: 'listPrice',     label: 'Unit',        right: true  },
     { col: 'discount',      label: 'Disc.',        right: true  },
     { col: 'mld',           label: 'MLD',          right: true  },
-    { col: 'unit',          label: 'Unit Price',  right: true  },
+    { col: 'unit',          label: 'Contract',    right: true  },
     { col: 'totalDiscount', label: 'Total Disc.', right: true  },
   ]
 
@@ -502,6 +503,8 @@ export default function QuickEntryPanel({
                       </td>
                       {/* MSP */}
                       <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
+                      {/* Unit Price — trade price before any discount */}
+                      <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.listPrice || l.msp)}</td>
                       {/* Disc. — read-only catalogue discount % */}
                       <td className="right mono tnum" style={{ fontSize: 12.5, color: l.discount > 0 ? '#059669' : 'var(--ink-3)' }}>
                         {l.discount > 0 ? `${l.discount}%` : '—'}
@@ -588,13 +591,41 @@ export default function QuickEntryPanel({
                           </td>
                         )
                       })()}
-                      {/* Total Disc. — read-only sum of catalogue discount + MLD */}
+                      {/* Total Disc. — effective discount from Unit price to Contract price */}
                       {(() => {
+                        const base = l.listPrice || l.msp
+                        const effectivePct = base > 0 ? Math.round((1 - l.unit / base) * 1000) / 10 : 0
                         const mldPct = parseFloat(l.mld) || 0
-                        const totalPct = (l.discount || 0) + mldPct
+                        const calculatedPct = Math.round(((l.discount || 0) + mldPct) * 10) / 10
+                        const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.05
                         return (
-                          <td className="right mono tnum" style={{ fontSize: 12.5, color: totalPct > 0 ? '#059669' : 'var(--ink-3)' }}>
-                            {totalPct > 0 ? `${totalPct}%` : '—'}
+                          <td className="right" style={{ fontSize: 12.5 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {isManualOverride && (
+                                  <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center' }}>
+                                    <Icon name="alert" size={12} />
+                                  </span>
+                                )}
+                                <span
+                                  className="mono tnum"
+                                  style={{
+                                    color: isManualOverride ? '#dc2626' : effectivePct > 0 ? '#059669' : 'var(--ink-3)',
+                                    background: isManualOverride ? 'rgba(220,38,38,0.06)' : undefined,
+                                    border: isManualOverride ? '1px solid rgba(220,38,38,0.2)' : undefined,
+                                    borderRadius: isManualOverride ? 4 : undefined,
+                                    padding: isManualOverride ? '1px 5px' : undefined,
+                                  }}
+                                >
+                                  {effectivePct !== 0 ? `${effectivePct}%` : '—'}
+                                </span>
+                              </div>
+                              {isManualOverride && (
+                                <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
+                                  Price override
+                                </div>
+                              )}
+                            </div>
                           </td>
                         )
                       })()}
@@ -649,7 +680,7 @@ export default function QuickEntryPanel({
                     </tr>
                     {noteOpen && (
                       <tr key={l.lineId + '-note'}>
-                        <td colSpan={hasVariantLines ? 10 : 9} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
+                        <td colSpan={hasVariantLines ? 11 : 10} style={{ paddingTop: 0, paddingBottom: 10, background: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
                               <input
