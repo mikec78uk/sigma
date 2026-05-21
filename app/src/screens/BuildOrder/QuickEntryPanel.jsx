@@ -594,7 +594,7 @@ export default function QuickEntryPanel({
                       {/* Total Disc. — effective discount from Unit price to Contract price */}
                       {(() => {
                         const base = l.listPrice || l.msp
-                        const effectivePct = base > 0 ? Math.round((1 - l.unit / base) * 1000) / 10 : 0
+                        const effectivePct = base > 0 ? Math.ceil((1 - l.unit / base) * 100) : 0
                         const mldPct = parseFloat(l.mld) || 0
                         const calculatedPct = Math.round(((l.discount || 0) + mldPct) * 10) / 10
                         const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.05
