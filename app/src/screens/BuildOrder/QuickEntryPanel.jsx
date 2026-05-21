@@ -598,33 +598,18 @@ export default function QuickEntryPanel({
                         const mldPct = parseFloat(l.mld) || 0
                         const calculatedPct = Math.round(((l.discount || 0) + mldPct) * 10) / 10
                         const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.05
+                        const showWarning = isManualOverride && effectivePct > 0
                         return (
                           <td className="right" style={{ fontSize: 12.5 }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                {isManualOverride && (
-                                  <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center' }}>
-                                    <Icon name="alert" size={12} />
-                                  </span>
-                                )}
-                                <span
-                                  className="mono tnum"
-                                  style={{
-                                    color: isManualOverride ? '#dc2626' : effectivePct > 0 ? '#059669' : 'var(--ink-3)',
-                                    background: isManualOverride ? 'rgba(220,38,38,0.06)' : undefined,
-                                    border: isManualOverride ? '1px solid rgba(220,38,38,0.2)' : undefined,
-                                    borderRadius: isManualOverride ? 4 : undefined,
-                                    padding: isManualOverride ? '1px 5px' : undefined,
-                                  }}
-                                >
-                                  {effectivePct !== 0 ? `${effectivePct}%` : '—'}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                              {showWarning && (
+                                <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center' }}>
+                                  <Icon name="alert" size={12} />
                                 </span>
-                              </div>
-                              {isManualOverride && (
-                                <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
-                                  Price override
-                                </div>
                               )}
+                              <span className="mono tnum" style={{ color: effectivePct > 0 ? (showWarning ? '#dc2626' : '#059669') : 'var(--ink-3)' }}>
+                                {effectivePct > 0 ? `${effectivePct}%` : '—'}
+                              </span>
                             </div>
                           </td>
                         )
