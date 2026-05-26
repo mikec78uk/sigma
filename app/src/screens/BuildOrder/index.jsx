@@ -420,10 +420,12 @@ function handleClear() {
             <span className="mono">{client?.code}</span> · {client?.group}
           </div>
         </div>
-        <div className="row gap-8">
-          <button className="btn" onClick={() => navigate('/', { state: { savedDraft: order.draftId || 'draft' } })}><Icon name="save" size={14} /> Save draft</button>
-          <button className="btn btn--ghost" onClick={() => setDiscardModalOpen(true)}>Discard</button>
-        </div>
+        {!(showImport && layout === 'quick') && (
+          <div className="row gap-8">
+            <button className="btn" onClick={() => navigate('/', { state: { savedDraft: order.draftId || 'draft' } })}><Icon name="save" size={14} /> Save draft</button>
+            <button className="btn btn--ghost" onClick={() => setDiscardModalOpen(true)}>Discard</button>
+          </div>
+        )}
       </div>
 
       {/* EDI price mismatch banner */}
@@ -522,8 +524,21 @@ function handleClear() {
       )}
 
       {layout === 'quick' && (
-        <div className="builder">
-          <QuickEntryPanel
+        <div className={showImport ? '' : 'builder'}>
+          {showImport && (
+            <SpreadsheetImportModal
+              catalogue={activeCatalogue}
+              orderType={order?.type ?? 'hospital'}
+              onImport={(matched, unmatched, oos, insufficient, wrongRoute) => {
+                handleImportQuick(matched, unmatched, oos, insufficient, wrongRoute)
+                setShowImport(false)
+                setImportInitialFile(null)
+              }}
+              onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]); setWrongRouteImport([]) }}
+              initialFile={importInitialFile}
+            />
+          )}
+          {!showImport && <QuickEntryPanel
             catalogue={activeCatalogue}
             lines={lines}
             addToBasket={addToBasketQuick}
@@ -545,25 +560,27 @@ function handleClear() {
             ediErrors={order?.ediErrors || []}
             onFileSelect={(file) => { setImportInitialFile(file); setShowImport(true) }}
             onImportClick={() => { setImportInitialFile(null); setShowImport(true) }}
-          />
-          <aside className="builder__basket">
-            <BasketPanel
-              lines={lines} setQty={setQty} removeLine={removeLine}
-              editLineId={editLineId} setEditLineId={setEditLineId}
-              setUnit={setUnit} setLineDesc={setLineDesc}
-              subtotal={subtotal} total={total}
-              orderDesc={orderDesc} setOrderDesc={setOrderDesc}
-              poNumber={poNumber} setPoNumber={setPoNumber}
-              shipDate={shipDate} setShipDate={setShipDate}
-              agent={agent} setAgent={setAgent}
-              manualPick={manualPick} setManualPick={setManualPick}
-              onSubmit={handleSubmit}
-              onClear={handleClear}
-              orderType={order?.type}
-              showFoot
-              hideLines
-            />
-          </aside>
+          />}
+          {!showImport && (
+            <aside className="builder__basket">
+              <BasketPanel
+                lines={lines} setQty={setQty} removeLine={removeLine}
+                editLineId={editLineId} setEditLineId={setEditLineId}
+                setUnit={setUnit} setLineDesc={setLineDesc}
+                subtotal={subtotal} total={total}
+                orderDesc={orderDesc} setOrderDesc={setOrderDesc}
+                poNumber={poNumber} setPoNumber={setPoNumber}
+                shipDate={shipDate} setShipDate={setShipDate}
+                agent={agent} setAgent={setAgent}
+                manualPick={manualPick} setManualPick={setManualPick}
+                onSubmit={handleSubmit}
+                onClear={handleClear}
+                orderType={order?.type}
+                showFoot
+                hideLines
+              />
+            </aside>
+          )}
         </div>
       )}
 
@@ -670,14 +687,18 @@ function handleClear() {
       )}
 
 
-      {showImport && (
-        <SpreadsheetImportModal
-          catalogue={activeCatalogue}
-          orderType={order?.type ?? 'hospital'}
-          onImport={layout === 'quick' ? handleImportQuick : handleImport}
-          onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]); setWrongRouteImport([]) }}
-          initialFile={importInitialFile}
-        />
+      {showImport && layout !== 'quick' && (
+        <div className="scrim">
+          <div className="modal modal--lg" style={{ maxWidth: 760, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <SpreadsheetImportModal
+              catalogue={activeCatalogue}
+              orderType={order?.type ?? 'hospital'}
+              onImport={handleImport}
+              onClose={() => { setShowImport(false); setImportInitialFile(null); setOosImport([]); setInsufficientImport([]); setUnmatchedImport([]); setWrongRouteImport([]) }}
+              initialFile={importInitialFile}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

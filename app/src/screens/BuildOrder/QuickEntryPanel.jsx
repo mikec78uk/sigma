@@ -195,11 +195,6 @@ export default function QuickEntryPanel({
         <div className="row gap-8" style={{ alignItems: 'center' }}>
           <TypeBadge type={orderType ?? 'hospital'} style={{ fontSize: 11.5, padding: '2px 8px' }} />
           <span className="badge badge--draft">Draft</span>
-          {hasItems && (
-            <button className="btn" onClick={onImportClick}>
-              <Icon name="doc" size={14} /> Import spreadsheet
-            </button>
-          )}
         </div>
       </div>
 

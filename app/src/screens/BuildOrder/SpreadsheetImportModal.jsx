@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { fmt } from '../../utils/format'
 import { CATALOGUE, NRT_CATALOGUE, ORDER_TYPES } from '../../data'
-import Modal from '../../components/Modal'
 import Icon from '../../components/Icon'
 
 function parseCSV(text) {
@@ -43,7 +42,6 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef(null)
 
-  // Only NRT orders have wrong-route items; hospital orders accept all products
   const otherCatalogue = orderType === 'nrt' ? CATALOGUE : []
   const otherType = ORDER_TYPES.find(t => t.id !== orderType)
   const currentType = ORDER_TYPES.find(t => t.id === orderType)
@@ -62,21 +60,14 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
       const { rows, error } = parseCSV(e.target.result)
       if (error) { setParseError(error); return }
 
-      const matchedRows = []
-      const unmatchedRows = []
-      const oosRows = []
-      const wrongRouteRows = []
+      const matchedRows = [], unmatchedRows = [], oosRows = [], wrongRouteRows = []
 
       rows.forEach(r => {
         const product = catalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
         if (!product) {
-          // Check if it exists in the other route's catalogue
           const otherProduct = otherCatalogue.find(p => p.sku.toLowerCase() === r.sku.toLowerCase())
-          if (otherProduct) {
-            wrongRouteRows.push({ ...r, product: otherProduct })
-          } else {
-            unmatchedRows.push(r)
-          }
+          if (otherProduct) wrongRouteRows.push({ ...r, product: otherProduct })
+          else unmatchedRows.push(r)
         } else if (product.stockState === 'out' || product.stock < r.qty) {
           oosRows.push({ ...r, product, available: product.stock })
         } else {
@@ -114,22 +105,40 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
     onClose()
   }
 
+  const estimatedTotal = matched.reduce((s, r) => s + (r.product.listPrice ?? r.product.msp) * r.qty, 0)
+
   return (
-    <Modal onClose={onClose} size="lg">
-      <div className="modal__head">
-        <div className="row between">
-          <div>
-            <div className="label" style={{ marginBottom: 4 }}>Import spreadsheet</div>
-            <h2>{step === 'upload' ? 'Upload spreadsheet' : `Preview — ${fileName}`}</h2>
-          </div>
-          <button className="btn btn--ghost btn--icon" onClick={onClose}><Icon name="x" size={16} /></button>
+    <div className="panel" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+
+      {/* Header */}
+      <div className="panel__head">
+        <div>
+          <div className="label" style={{ marginBottom: 4 }}>Import spreadsheet</div>
+          <h3 style={{ fontSize: 18 }}>
+            {step === 'upload' ? 'Upload spreadsheet' : `Preview — ${fileName}`}
+          </h3>
+        </div>
+        <div className="row gap-8">
+          {step === 'preview' && matched.length > 0 && (
+            <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
+              Add {matched.length} {matched.length === 1 ? 'product' : 'products'} to basket <Icon name="arrow-right" size={14} />
+            </button>
+          )}
+          {step === 'preview' && (
+            <button className="btn" onClick={() => { setStep('upload'); setParseError(null) }}>
+              <Icon name="back" size={14} /> Upload different file
+            </button>
+          )}
+          <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
         </div>
       </div>
 
-      <div className="modal__body">
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+
         {step === 'upload' && (
           <div className="col gap-16">
-            {/* Drop zone */}
             <div
               onDragOver={e => { e.preventDefault(); setDragging(true) }}
               onDragLeave={() => setDragging(false)}
@@ -137,9 +146,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               onClick={() => inputRef.current?.click()}
               style={{
                 border: `2px dashed ${dragging ? 'var(--ink-3)' : 'var(--border)'}`,
-                borderRadius: 10,
-                padding: '40px 24px',
-                textAlign: 'center',
+                borderRadius: 10, padding: '40px 24px', textAlign: 'center',
                 cursor: 'pointer',
                 background: dragging ? 'var(--surface-2)' : 'var(--surface)',
                 transition: 'all 0.15s',
@@ -157,16 +164,10 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               </div>
             )}
 
-            {/* Format hint */}
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
               <div className="label" style={{ marginBottom: 8 }}>Expected column format</div>
               <table className="tbl" style={{ fontSize: 12.5 }}>
-                <thead>
-                  <tr>
-                    <th>SKU</th>
-                    <th>Qty</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>SKU</th><th>Qty</th></tr></thead>
                 <tbody>
                   <tr><td className="mono">SC-04128</td><td className="mono">10</td></tr>
                   <tr><td className="mono">SC-04227</td><td className="mono">4</td></tr>
@@ -176,11 +177,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
                 <div className="muted" style={{ fontSize: 12 }}>
                   Column headers are flexible — any column containing "SKU", "Code", "Qty" or "Quantity" will be detected automatically.
                 </div>
-                <button
-                  className="btn btn--sm btn--ghost"
-                  onClick={downloadTemplate}
-                  style={{ fontSize: 12, color: 'var(--ink-3)', gap: 5, flexShrink: 0, marginLeft: 12 }}
-                >
+                <button className="btn btn--sm btn--ghost" onClick={downloadTemplate} style={{ fontSize: 12, color: 'var(--ink-3)', gap: 5, flexShrink: 0, marginLeft: 12 }}>
                   <Icon name="download" size={12} /> Download example file
                 </button>
               </div>
@@ -218,7 +215,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               )}
             </div>
 
-            {/* Out of stock lines */}
+            {/* Insufficient stock */}
             {outOfStock.length > 0 && (
               <div>
                 <div className="label" style={{ marginBottom: 8 }}>Insufficient stock — will not be added</div>
@@ -238,9 +235,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
                         <tr key={i}>
                           <td className="mono muted" style={{ fontSize: 12 }}>{r.row ?? '—'}</td>
                           <td className="mono" style={{ fontSize: 12, color: '#991b1b' }}>{r.sku}</td>
-                          <td>
-                            <div style={{ fontSize: 13, color: '#991b1b' }}>{r.product.name}</div>
-                          </td>
+                          <td><div style={{ fontSize: 13, color: '#991b1b' }}>{r.product.name}</div></td>
                           <td className="right mono tnum" style={{ color: '#991b1b' }}>{r.qty}</td>
                           <td className="right mono tnum" style={{ color: r.available === 0 ? '#991b1b' : '#92400e', fontWeight: 600 }}>{r.available}</td>
                         </tr>
@@ -254,21 +249,17 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               </div>
             )}
 
-            {/* Wrong route lines */}
+            {/* Wrong route */}
             {wrongRoute.length > 0 && (
               <div style={{ border: '1px solid #bae6fd', borderRadius: 8, overflow: 'hidden', background: '#f0f9ff' }}>
-                {/* Header */}
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0c4a6e' }}>
-                      Available via {otherType?.short ?? 'a different route'}, not {currentType?.short ?? 'this route'}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#0369a1', marginTop: 2 }}>
-                      These {wrongRoute.length === 1 ? 'product is' : 'products are'} only available on the {otherType?.short} order route and won't be added here.
-                    </div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #bae6fd' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#0c4a6e' }}>
+                    Available via {otherType?.short ?? 'a different route'}, not {currentType?.short ?? 'this route'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#0369a1', marginTop: 2 }}>
+                    These {wrongRoute.length === 1 ? 'product is' : 'products are'} only available on the {otherType?.short} order route and won't be added here.
                   </div>
                 </div>
-                {/* Table */}
                 <table className="tbl">
                   <thead>
                     <tr>
@@ -295,7 +286,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               </div>
             )}
 
-            {/* Unrecognised lines */}
+            {/* Unrecognised */}
             {unmatched.length > 0 && (
               <div>
                 <div className="label" style={{ marginBottom: 8 }}>Unrecognised lines — will be skipped</div>
@@ -321,67 +312,59 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               </div>
             )}
 
-            {/* Matched lines */}
+            {/* Matched */}
             {matched.length > 0 && (
               <div>
                 <div className="label" style={{ marginBottom: 8 }}>Matched products</div>
                 <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-                  <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                    <table className="tbl">
-                      <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
-                        <tr>
-                          <th>SKU</th>
-                          <th>Product</th>
-                          <th className="right">Qty</th>
-                          <th className="right">Unit price</th>
-                          <th className="right">Line total</th>
+                  <table className="tbl">
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
+                      <tr>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th className="right">Qty</th>
+                        <th className="right">Unit price</th>
+                        <th className="right">Line total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matched.map(r => (
+                        <tr key={r.sku}>
+                          <td className="mono muted" style={{ fontSize: 12 }}>{r.sku}</td>
+                          <td>
+                            <div style={{ fontSize: 13.5 }}>{r.product.name}</div>
+                            <div className="muted" style={{ fontSize: 11.5 }}>{r.product.pack}</div>
+                          </td>
+                          <td className="right mono tnum">{r.qty}</td>
+                          <td className="right mono tnum">{fmt(r.product.listPrice ?? r.product.msp)}</td>
+                          <td className="right mono tnum" style={{ fontWeight: 600 }}>{fmt((r.product.listPrice ?? r.product.msp) * r.qty)}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {matched.map(r => (
-                          <tr key={r.sku}>
-                            <td className="mono muted" style={{ fontSize: 12 }}>{r.sku}</td>
-                            <td>
-                              <div style={{ fontSize: 13.5 }}>{r.product.name}</div>
-                              <div className="muted" style={{ fontSize: 11.5 }}>{r.product.pack}</div>
-                            </td>
-                            <td className="right mono tnum">{r.qty}</td>
-                            <td className="right mono tnum">{fmt(r.product.promo ?? r.product.msp)}</td>
-                            <td className="right mono tnum" style={{ fontWeight: 600 }}>{fmt((r.product.promo ?? r.product.msp) * r.qty)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
           </div>
         )}
+        </div>
       </div>
 
-      <div className="modal__foot">
-        <div className="muted" style={{ fontSize: 12.5 }}>
-          {step === 'upload' && 'Upload a spreadsheet to pre-fill the order basket'}
-          {step === 'preview' && matched.length > 0 && (
-            <>Adding <b style={{ color: 'var(--ink-2)' }}>{matched.length} {matched.length === 1 ? 'product' : 'products'}</b> — estimated total <b style={{ color: 'var(--ink-2)' }}>{fmt(matched.reduce((s, r) => s + (r.product.promo ?? r.product.msp) * r.qty, 0))}</b></>
-          )}
-          {step === 'preview' && matched.length === 0 && 'No products could be matched — nothing will be added'}
-        </div>
-        <div className="row gap-8">
-          {step === 'preview' && (
-            <button className="btn" onClick={() => { setStep('upload'); setParseError(null) }}>
-              <Icon name="back" size={14} /> Upload different file
-            </button>
-          )}
-          <button className="btn" onClick={onClose}>Cancel</button>
-          {step === 'preview' && (
+      {/* Footer */}
+      {step === 'preview' && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '12px 24px', background: 'var(--surface)', flexShrink: 0 }}>
+          <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="muted" style={{ fontSize: 12.5 }}>
+              {matched.length > 0 ? (
+                <>Adding <b style={{ color: 'var(--ink-2)' }}>{matched.length} {matched.length === 1 ? 'product' : 'products'}</b> — estimated total <b style={{ color: 'var(--ink-2)' }}>{fmt(estimatedTotal)}</b></>
+              ) : 'No products could be matched — nothing will be added'}
+            </div>
             <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
               Add {matched.length} {matched.length === 1 ? 'product' : 'products'} to basket <Icon name="arrow-right" size={14} />
             </button>
-          )}
+          </div>
         </div>
-      </div>
-    </Modal>
+      )}
+    </div>
   )
 }
