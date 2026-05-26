@@ -111,25 +111,22 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
     <div className="panel" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
-      <div className="panel__head">
-        <div>
-          <div className="label" style={{ marginBottom: 4 }}>Import spreadsheet</div>
-          <h3 style={{ fontSize: 18 }}>
-            {step === 'upload' ? 'Upload spreadsheet' : `Preview — ${fileName}`}
-          </h3>
-        </div>
-        <div className="row gap-8">
-          {step === 'preview' && matched.length > 0 && (
-            <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
-              Add {matched.length} {matched.length === 1 ? 'product' : 'products'} to basket <Icon name="arrow-right" size={14} />
-            </button>
-          )}
-          {step === 'preview' && (
-            <button className="btn" onClick={() => { setStep('upload'); setParseError(null) }}>
-              <Icon name="back" size={14} /> Upload different file
-            </button>
-          )}
-          <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+      <div className="panel__head" style={{ padding: '0' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0' }}>
+          <div>
+            <div className="label" style={{ marginBottom: 4 }}>Import spreadsheet</div>
+            <h3 style={{ fontSize: 18 }}>
+              {step === 'upload' ? 'Upload spreadsheet' : `Preview — ${fileName}`}
+            </h3>
+          </div>
+          <div className="row gap-8">
+            <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+            {step === 'preview' && (
+              <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
+                Add {matched.length} {matched.length === 1 ? 'product' : 'products'} to basket <Icon name="arrow-right" size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -160,11 +160,12 @@ export default function BuildOrder() {
       }
     }
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+    const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
     setLines([{
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
       discount: p.discount || 0,
-      unit: listPrice,
+      unit: contractPrice,
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: '', mld: '',
@@ -181,11 +182,12 @@ export default function BuildOrder() {
       }
     }
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+    const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
     setLines([{
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
       discount: p.discount || 0,
-      unit: listPrice,
+      unit: contractPrice,
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: '', mld: '',
@@ -232,7 +234,8 @@ export default function BuildOrder() {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
           const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: listPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -254,7 +257,8 @@ export default function BuildOrder() {
           next[idx] = { ...next[idx], qty: next[idx].qty + qty }
         } else {
           const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: listPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
         }
       })
       return next
@@ -314,56 +318,6 @@ function handleClear() {
   return (
     <div className={'page__body ' + (layout === 'split' || layout === 'quick' ? 'page__body--wide' : '')}>
 
-      {/* Approval comment modal */}
-      {approvalModalOpen && (
-        <div className="scrim">
-          <div className="modal" style={{ maxWidth: 480 }}>
-            <div className="modal__head">
-              <div className="row between">
-                <div>
-                  <div className="label" style={{ marginBottom: 4 }}>Approval required</div>
-                  <h2>Submit for approval</h2>
-                </div>
-                <button className="btn btn--ghost btn--icon" onClick={() => setApprovalModalOpen(false)}>
-                  <Icon name="x" size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="modal__body">
-              <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginBottom: 16 }}>
-                This order contains lines priced below MSP and will be sent for commercial approval before fulfilment can begin.
-              </div>
-              <div className="field">
-                <div className="field__label">
-                  Comment to approver <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
-                </div>
-                <textarea
-                  className="input"
-                  autoFocus
-                  rows={5}
-                  placeholder="Add any context that might help the approver — e.g. reason for the pricing, urgency, client relationship…"
-                  value={approverComment}
-                  onChange={e => setApproverComment(e.target.value)}
-                  style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', padding: 14, height: 140 }}
-                />
-              </div>
-            </div>
-            <div className="modal__foot">
-              <div />
-              <div className="row gap-8">
-                <button className="btn" onClick={() => setApprovalModalOpen(false)}>Cancel</button>
-                <button
-                  className="btn btn--primary"
-                  onClick={() => { setApprovalModalOpen(false); submitOrder(approverComment) }}
-                >
-                  <Icon name="check" size={14} /> Submit for approval
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Discard confirmation modal */}
       {discardModalOpen && (
         <div className="scrim">
@@ -420,7 +374,7 @@ function handleClear() {
             <span className="mono">{client?.code}</span> · {client?.group}
           </div>
         </div>
-        {!(showImport && layout === 'quick') && (
+        {!(showImport && layout === 'quick') && !approvalModalOpen && (
           <div className="row gap-8">
             <button className="btn" onClick={() => navigate('/', { state: { savedDraft: order.draftId || 'draft' } })}><Icon name="save" size={14} /> Save draft</button>
             <button className="btn btn--ghost" onClick={() => setDiscardModalOpen(true)}>Discard</button>
@@ -429,7 +383,7 @@ function handleClear() {
       </div>
 
       {/* EDI price mismatch banner */}
-      {order.status === 'edi-error' && order.ediErrors?.length > 0 && (
+      {!approvalModalOpen && order.status === 'edi-error' && order.ediErrors?.length > 0 && (
         <div style={{ marginBottom: 20, background: '#fff7ed', border: '1px solid rgba(194,65,12,0.3)', borderRadius: 10, padding: '12px 16px' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <Icon name="alert" size={15} style={{ color: '#c2410c', flexShrink: 0, marginTop: 2 }} />
@@ -459,7 +413,7 @@ function handleClear() {
       )}
 
       {/* Rejection notice banner */}
-      {order.rejectionNote && (
+      {!approvalModalOpen && order.rejectionNote && (
         <div style={{ marginBottom: 20, background: '#fff5f5', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <Icon name="alert" size={15} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
           <div>
@@ -470,7 +424,7 @@ function handleClear() {
       )}
 
       {/* Draft OOS removal banner */}
-      {draftOosRemoved.length > 0 && (
+      {!approvalModalOpen && draftOosRemoved.length > 0 && !(showImport && layout === 'quick') && (
         <div style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>
@@ -507,7 +461,67 @@ function handleClear() {
         </div>
       )}
 
-      {layout === 'stepped' && (
+      {/* Approval inline page */}
+      {approvalModalOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 24px' }}>
+            <div className="label" style={{ marginBottom: 4 }}>Approval required</div>
+            <h3 style={{ fontSize: 18 }}>Submit for approval</h3>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+                <Icon name="alert" size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+                <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e' }}>Lines requiring commercial approval</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {lines.filter(l => l.unit < l.msp - 0.001).map(l => (
+                  <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
+                    <span className="mono" style={{ fontSize: 11.5, color: '#92400e', flexShrink: 0 }}>{l.sku}</span>
+                    <span style={{ flex: 1, color: '#78350f' }}>{l.name}</span>
+                    <span className="mono" style={{ fontSize: 12, color: '#92400e', flexShrink: 0 }}>
+                      {fmt(l.unit)} <span style={{ opacity: 0.6 }}>vs MSP {fmt(l.msp)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--ink-2)' }}>
+              This order contains lines priced below MSP and will be sent for commercial approval before fulfilment can begin.
+            </div>
+            <div className="field">
+              <div className="field__label">
+                Comment to approver <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+              </div>
+              <textarea
+                className="input"
+                autoFocus
+                rows={5}
+                placeholder="Add any context that might help the approver — e.g. reason for the pricing, urgency, client relationship…"
+                value={approverComment}
+                onChange={e => setApproverComment(e.target.value)}
+                style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', padding: 14, height: 140 }}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ borderTop: '1px solid var(--border)', padding: '12px 24px', background: 'var(--surface-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button className="btn" onClick={() => setApprovalModalOpen(false)}>
+              <Icon name="arrow-left" size={14} /> Back to create order
+            </button>
+            <button className="btn btn--primary" onClick={() => { setApprovalModalOpen(false); submitOrder(approverComment) }}>
+              <Icon name="check" size={14} /> Submit for approval
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!approvalModalOpen && layout === 'stepped' && (
         <div className="stepper" style={{ marginBottom: 20 }}>
           <div className={'stepper__item ' + (step === 'catalogue' ? 'is-active' : 'is-done')}>
             <span className="stepper__num">{step !== 'catalogue' ? '✓' : '1'}</span> Add products
@@ -523,7 +537,7 @@ function handleClear() {
         </div>
       )}
 
-      {layout === 'quick' && (
+      {!approvalModalOpen && layout === 'quick' && (
         <div className={showImport ? '' : 'builder'}>
           {showImport && (
             <SpreadsheetImportModal
@@ -584,7 +598,7 @@ function handleClear() {
         </div>
       )}
 
-      {layout !== 'quick' && (
+      {!approvalModalOpen && layout !== 'quick' && (
       <div className={'builder ' + (layout === 'stepped' ? 'builder--stacked' : '')}>
         {(layout === 'split' || step === 'catalogue') && (
           <div>

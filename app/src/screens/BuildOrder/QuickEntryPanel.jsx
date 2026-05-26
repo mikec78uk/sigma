@@ -32,6 +32,8 @@ export default function QuickEntryPanel({
 }) {
   const [q, setQ] = useState('')
   const [suggestions, setSuggestions] = useState([])
+  const [allResults, setAllResults] = useState([])
+  const [showAllModal, setShowAllModal] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [sortCol, setSortCol] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
@@ -55,15 +57,14 @@ export default function QuickEntryPanel({
   }, [lines])
 
   useEffect(() => {
-    if (!q.trim()) { setSuggestions([]); setCursor(-1); return }
+    if (!q.trim()) { setSuggestions([]); setAllResults([]); setCursor(-1); return }
     const s = q.toLowerCase()
-    const results = catalogue
-      .filter(p =>
-        p.name.toLowerCase().includes(s) ||
-        p.sku.toLowerCase().includes(s)
-      )
-      .slice(0, 8)
-    setSuggestions(results)
+    const results = catalogue.filter(p =>
+      p.name.toLowerCase().includes(s) ||
+      p.sku.toLowerCase().includes(s)
+    )
+    setSuggestions(results.slice(0, 5))
+    setAllResults(results)
     setCursor(-1)
   }, [q, catalogue])
 
@@ -184,6 +185,7 @@ export default function QuickEntryPanel({
   ]
 
   return (
+    <>
     <div className="panel" style={{ flex: 1, minWidth: 0 }}>
       <div className="panel__head">
         <div>
@@ -237,7 +239,7 @@ export default function QuickEntryPanel({
                     cursor: isBlocked ? 'default' : 'pointer',
                     opacity: isOos ? 0.45 : 1,
                     background: !isBlocked && cursor === i ? 'var(--surface-2)' : '#fff',
-                    borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                    borderBottom: '1px solid var(--border)',
                   }}
                 >
                   <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74, opacity: isExportRestricted ? 0.45 : 1 }}>{p.sku}</span>
@@ -245,8 +247,7 @@ export default function QuickEntryPanel({
                   {isExportRestricted ? (
                     <span style={{
                       fontSize: 11.5, fontWeight: 500,
-                      color: '#92400e',
-                      background: '#fefce8',
+                      color: '#92400e', background: '#fefce8',
                       border: '1px solid #fde68a',
                       borderRadius: 5, padding: '2px 8px',
                       whiteSpace: 'nowrap', flexShrink: 0,
@@ -270,6 +271,20 @@ export default function QuickEntryPanel({
                 </div>
               )
             })}
+            {allResults.length > 5 && (
+              <div
+                onMouseDown={() => { setSuggestions([]); setShowAllModal(true) }}
+                style={{
+                  padding: '9px 12px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', cursor: 'pointer',
+                  background: 'var(--surface-2)',
+                  fontSize: 13, color: 'var(--ink-2)',
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>View more results</span>
+                <span className="muted" style={{ fontSize: 12 }}>{allResults.length} matching products <Icon name="chevron-right" size={12} /></span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -589,11 +604,14 @@ export default function QuickEntryPanel({
                       {/* Total Disc. — effective discount from Unit price to Contract price */}
                       {(() => {
                         const base = l.listPrice || l.msp
-                        const effectivePct = base > 0 ? Math.ceil((1 - l.unit / base) * 100) : 0
                         const mldPct = parseFloat(l.mld) || 0
                         const calculatedPct = Math.round(((l.discount || 0) + mldPct) * 10) / 10
-                        const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.05
+                        // Back-calculate only to detect manual overrides — use Math.ceil to round up
+                        const effectivePct = base > 0 ? Math.ceil((1 - l.unit / base) * 100) : 0
+                        const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.5
                         const showWarning = isManualOverride && effectivePct > 0
+                        // Display: use catalogue discount+MLD directly unless user manually changed the price
+                        const displayPct = isManualOverride ? effectivePct : Math.round(calculatedPct)
                         return (
                           <td className="right" style={{ fontSize: 12.5 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
@@ -602,8 +620,8 @@ export default function QuickEntryPanel({
                                   <Icon name="alert" size={12} />
                                 </span>
                               )}
-                              <span className="mono tnum" style={{ color: effectivePct > 0 ? (showWarning ? '#dc2626' : '#059669') : 'var(--ink-3)' }}>
-                                {effectivePct > 0 ? `${effectivePct}%` : '—'}
+                              <span className="mono tnum" style={{ color: displayPct > 0 ? (showWarning ? '#dc2626' : '#059669') : 'var(--ink-3)' }}>
+                                {displayPct > 0 ? `${displayPct}%` : '—'}
                               </span>
                             </div>
                           </td>
@@ -704,5 +722,59 @@ export default function QuickEntryPanel({
         </div>
       )}
     </div>
+    {/* All results modal */}
+    {showAllModal && (
+      <div className="scrim">
+        <div className="modal" style={{ maxWidth: 620, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="modal__head">
+            <div className="row between">
+              <div>
+                <div className="label" style={{ marginBottom: 4 }}>Search results</div>
+                <h2 style={{ fontSize: 18 }}>{allResults.length} matching {allResults.length === 1 ? 'item' : 'items'}</h2>
+              </div>
+              <button className="btn btn--ghost btn--icon" onClick={() => setShowAllModal(false)}>
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {allResults.map((p, i) => {
+              const isOos = p.stockState === 'out'
+              const isExportRestricted = !!p.exportRestricted
+              const isBlocked = isOos || isExportRestricted
+              return (
+                <div key={p.sku} style={{
+                  padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                  borderBottom: '1px solid var(--border)',
+                  opacity: isBlocked ? 0.5 : 1,
+                }}>
+                  <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74, flexShrink: 0 }}>{p.sku}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5 }}>{p.name}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>{p.pack}</div>
+                  </div>
+                  <StockDot state={p.stockState} />
+                  {isExportRestricted ? (
+                    <span style={{ fontSize: 11.5, color: '#92400e', background: '#fefce8', border: '1px solid #fde68a', borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                      Not available for export
+                    </span>
+                  ) : (
+                    <button
+                      className="btn btn--sm btn--primary"
+                      disabled={isOos}
+                      onClick={() => { selectProduct(p); setShowAllModal(false) }}
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
+

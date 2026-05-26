@@ -3,18 +3,6 @@ import { HOSPITAL_CLIENTS } from '../../data'
 import { fmt } from '../../utils/format'
 import Icon from '../../components/Icon'
 
-function Row({ label, value, mono }) {
-  if (!value && value !== 0) return null
-  return (
-    <div style={{ display: 'flex', gap: 16, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-      <div className="label" style={{ minWidth: 180, paddingTop: 1 }}>{label}</div>
-      <div style={{ flex: 1, fontSize: 13.5, ...(mono ? { fontFamily: 'var(--font-mono)', fontWeight: 600 } : {}) }}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
 export default function OrderSubmitted() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -34,46 +22,45 @@ export default function OrderSubmitted() {
     )
   }
 
-  const manualPickLabel = order.manualPick?.enabled
-    ? `Yes — ${order.manualPick.reasonCode || 'No reason code'}${order.manualPick.note ? ` · "${order.manualPick.note}"` : ''}`
-    : 'No — automated DC fulfilment'
-
   const belowMspLines = (order.lines || []).filter(l => l.unit < l.msp - 0.001)
   const needsApproval = belowMspLines.length > 0
 
+  const now = new Date()
+  const placedAt = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }).toUpperCase()
+    + ', ' + now.toLocaleDateString('en-GB')
+
+  const orderTotal = (order.lines || []).reduce((s, l) => s + l.unit * l.qty, 0)
+
   return (
     <div className="page__body">
-      <div className="panel" style={{ maxWidth: 720, margin: '40px auto', padding: 8 }}>
+      <div className="panel" style={{ maxWidth: 760, margin: '40px auto' }}>
 
-        {/* Hero */}
-        <div style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%',
-            background: needsApproval ? '#fffbeb' : 'var(--ok-bg)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 20,
-          }}>
-            <Icon name={needsApproval ? 'alert' : 'check'} size={28} style={{ color: needsApproval ? '#f59e0b' : 'var(--ok)' }} />
+        {/* Header */}
+        <div style={{ padding: '28px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 32 }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: 22, marginBottom: 16 }}>
+              Your Order #{orderId} has been {needsApproval ? 'submitted for approval' : 'submitted'}
+            </h2>
+            <div className="label" style={{ marginBottom: 4 }}>Order reference</div>
+            <div style={{ fontSize: 13.5 }}>{order.description || '—'}</div>
           </div>
-          <h2>{needsApproval ? 'Order Submitted for Approval' : 'Order Submitted'}</h2>
-          <p className="muted" style={{ marginTop: 8, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
-            {needsApproval
-              ? `${belowMspLines.length} ${belowMspLines.length === 1 ? 'line has a' : 'lines have'} unit ${belowMspLines.length === 1 ? 'price' : 'prices'} below MSP and requires commercial approval before fulfilment can begin.`
-              : 'Your order has been queued for fulfilment.'
-            }
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 24 }}>
-            <button className="btn" onClick={() => navigate('/')}>Back to orders</button>
-            <button className="btn btn--primary" onClick={() => navigate('/orders/new')}>
-              <Icon name="plus" size={14} /> Start another
-            </button>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div className="label" style={{ marginBottom: 4 }}>Order placed</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{placedAt}</div>
+            <div style={{ marginTop: 16 }}>
+              <div className="label" style={{ marginBottom: 4 }}>Client</div>
+              <div style={{ fontSize: 13.5 }}>{client?.name || '—'}</div>
+            </div>
           </div>
         </div>
 
         {/* Approval callout */}
         {needsApproval && (
-          <div style={{ margin: '0 24px 8px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px' }}>
-            <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e', marginBottom: 8 }}>Lines requiring approval</div>
+          <div style={{ margin: '0 32px', marginTop: 20, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+              <Icon name="alert" size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e' }}>Lines requiring commercial approval</div>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {belowMspLines.map(l => (
                 <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
@@ -94,19 +81,39 @@ export default function OrderSubmitted() {
           </div>
         )}
 
-        {/* Order details */}
-        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 24px 32px' }}>
-          <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <div className="label" style={{ marginBottom: 4, paddingTop: 16 }}>Order details</div>
-            <Row label="Order ID"            value={orderId}                       mono />
-            <Row label="Client"              value={client ? <>{client.code && <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{client.code}</div>}{client.name}{client.postcode && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{client.postcode}</div>}</> : undefined} />
-            <Row label="Lines"               value={order.lines?.length ?? 0} />
-            <Row label="Total"               value={fmt(order.total)}              mono />
-            <Row label="PO number"           value={order.poNumber} />
-            <Row label="Order note"          value={order.description} />
-            <Row label="Required ship date"  value={order.shipDate} />
-            <Row label="Manual picking"      value={manualPickLabel} />
+        {/* Products table */}
+        <div style={{ marginTop: needsApproval ? 20 : 0 }}>
+          {/* Column headers */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '10px 32px', borderTop: needsApproval ? '1px solid var(--border)' : undefined, borderBottom: '1px solid var(--border)' }}>
+            <div className="label" style={{ flex: 1 }}>{order.lines?.length ?? 0} product{order.lines?.length !== 1 ? 's' : ''}</div>
+            <div className="label" style={{ width: 100, textAlign: 'right' }}>Pack</div>
+            <div className="label" style={{ width: 60, textAlign: 'right' }}>Qty</div>
+            <div className="label" style={{ width: 90, textAlign: 'right' }}>Price</div>
           </div>
+
+          {/* Product rows */}
+          {(order.lines || []).map(l => (
+            <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'center', padding: '12px 32px', borderBottom: '1px solid var(--border)', gap: 14 }}>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--ink-2)' }}>{l.name}</div>
+              <div style={{ width: 100, textAlign: 'right', fontSize: 13, color: 'var(--ink-3)' }}>{l.pack || '—'}</div>
+              <div className="mono tnum" style={{ width: 60, textAlign: 'right', fontSize: 13 }}>{l.qty.toFixed(2)}</div>
+              <div className="mono tnum" style={{ width: 90, textAlign: 'right', fontSize: 13, fontWeight: 600 }}>{fmt(l.unit * l.qty)}</div>
+            </div>
+          ))}
+
+          {/* Total */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '14px 32px' }}>
+            <div style={{ flex: 1, fontWeight: 700, fontSize: 15 }}>Total</div>
+            <div className="mono tnum" style={{ width: 90, textAlign: 'right', fontWeight: 700, fontSize: 15 }}>{fmt(orderTotal)}</div>
+          </div>
+        </div>
+
+        {/* Footer buttons */}
+        <div style={{ padding: '16px 32px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+          <button className="btn" onClick={() => navigate('/')}>Back to orders</button>
+          <button className="btn btn--primary" onClick={() => navigate('/orders/new')}>
+            <Icon name="plus" size={14} /> Start another
+          </button>
         </div>
 
       </div>

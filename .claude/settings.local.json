@@ -24,7 +24,10 @@
       "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering ls-files app/)",
       "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering add .github/workflows/deploy.yml)",
       "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering commit -m \"Fix: pass base path directly to vite build\")",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(git push *)"
     ]
   }
 }
