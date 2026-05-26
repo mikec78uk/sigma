@@ -605,13 +605,17 @@ export default function QuickEntryPanel({
                       {(() => {
                         const base = l.listPrice || l.msp
                         const mldPct = parseFloat(l.mld) || 0
-                        const calculatedPct = Math.round(((l.discount || 0) + mldPct) * 10) / 10
-                        // Back-calculate only to detect manual overrides — use Math.ceil to round up
-                        const effectivePct = base > 0 ? Math.ceil((1 - l.unit / base) * 100) : 0
-                        const isManualOverride = Math.abs(effectivePct - calculatedPct) > 0.5
-                        const showWarning = isManualOverride && effectivePct > 0
-                        // Display: use catalogue discount+MLD directly unless user manually changed the price
-                        const displayPct = isManualOverride ? effectivePct : Math.round(calculatedPct)
+                        const totalDiscPct = (l.discount || 0) + mldPct
+                        // What the price should be given catalogue discount + MLD
+                        const calculatedUnit = Math.round(base * (1 - totalDiscPct / 100) * 100) / 100
+                        // Manual override = unit differs from calculated by more than rounding error
+                        const isManualOverride = Math.abs(l.unit - calculatedUnit) > 0.005
+                        const priceWentDown = l.unit < base
+                        const showWarning = isManualOverride && priceWentDown
+                        // Display: catalogue % when no override; back-calculate (round up) when overridden
+                        const displayPct = isManualOverride
+                          ? (base > 0 ? Math.ceil((1 - l.unit / base) * 100) : 0)
+                          : Math.round(totalDiscPct * 10) / 10
                         return (
                           <td className="right" style={{ fontSize: 12.5 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
