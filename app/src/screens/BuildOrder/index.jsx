@@ -466,57 +466,63 @@ function handleClear() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
 
           {/* Header */}
-          <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 24px' }}>
-            <div className="label" style={{ marginBottom: 4 }}>Approval required</div>
-            <h3 style={{ fontSize: 18 }}>Submit for approval</h3>
+          <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 0' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '0 24px' }}>
+              <div className="label" style={{ marginBottom: 4 }}>Approval required</div>
+              <h3 style={{ fontSize: 18 }}>Submit for approval</h3>
+            </div>
           </div>
 
           {/* Body */}
-          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
-                <Icon name="alert" size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
-                <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e' }}>Lines requiring commercial approval</div>
+          <div style={{ padding: '24px' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+                  <Icon name="alert" size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#92400e' }}>Lines requiring commercial approval</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {lines.filter(l => l.unit < l.msp - 0.001).map(l => (
+                    <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
+                      <span className="mono" style={{ fontSize: 11.5, color: '#92400e', flexShrink: 0 }}>{l.sku}</span>
+                      <span style={{ flex: 1, color: '#78350f' }}>{l.name}</span>
+                      <span className="mono" style={{ fontSize: 12, color: '#92400e', flexShrink: 0 }}>
+                        {fmt(l.unit)} <span style={{ opacity: 0.6 }}>vs MSP {fmt(l.msp)}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {lines.filter(l => l.unit < l.msp - 0.001).map(l => (
-                  <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
-                    <span className="mono" style={{ fontSize: 11.5, color: '#92400e', flexShrink: 0 }}>{l.sku}</span>
-                    <span style={{ flex: 1, color: '#78350f' }}>{l.name}</span>
-                    <span className="mono" style={{ fontSize: 12, color: '#92400e', flexShrink: 0 }}>
-                      {fmt(l.unit)} <span style={{ opacity: 0.6 }}>vs MSP {fmt(l.msp)}</span>
-                    </span>
-                  </div>
-                ))}
+              <div style={{ fontSize: 13.5, color: 'var(--ink-2)' }}>
+                This order contains lines priced below MSP and will be sent for commercial approval before fulfilment can begin.
               </div>
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--ink-2)' }}>
-              This order contains lines priced below MSP and will be sent for commercial approval before fulfilment can begin.
-            </div>
-            <div className="field">
-              <div className="field__label">
-                Comment to approver <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+              <div className="field">
+                <div className="field__label">
+                  Comment to approver <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                </div>
+                <textarea
+                  className="input"
+                  autoFocus
+                  rows={5}
+                  placeholder="Add any context that might help the approver — e.g. reason for the pricing, urgency, client relationship…"
+                  value={approverComment}
+                  onChange={e => setApproverComment(e.target.value)}
+                  style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', padding: 14, height: 140 }}
+                />
               </div>
-              <textarea
-                className="input"
-                autoFocus
-                rows={5}
-                placeholder="Add any context that might help the approver — e.g. reason for the pricing, urgency, client relationship…"
-                value={approverComment}
-                onChange={e => setApproverComment(e.target.value)}
-                style={{ width: '100%', fontSize: 13.5, resize: 'vertical', fontFamily: 'inherit', padding: 14, height: 140 }}
-              />
             </div>
           </div>
 
           {/* Footer */}
-          <div style={{ borderTop: '1px solid var(--border)', padding: '12px 24px', background: 'var(--surface-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button className="btn" onClick={() => setApprovalModalOpen(false)}>
-              <Icon name="arrow-left" size={14} /> Back to create order
-            </button>
-            <button className="btn btn--primary" onClick={() => { setApprovalModalOpen(false); submitOrder(approverComment) }}>
-              <Icon name="check" size={14} /> Submit for approval
-            </button>
+          <div style={{ borderTop: '1px solid var(--border)', padding: '12px 24px', background: 'var(--surface-2)' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button className="btn" onClick={() => setApprovalModalOpen(false)}>
+                <Icon name="arrow-left" size={14} /> Back to create order
+              </button>
+              <button className="btn btn--primary" onClick={() => { setApprovalModalOpen(false); submitOrder(approverComment) }}>
+                <Icon name="check" size={14} /> Submit for approval
+              </button>
+            </div>
           </div>
         </div>
       )}
