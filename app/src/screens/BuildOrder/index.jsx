@@ -161,6 +161,7 @@ export default function BuildOrder() {
     }
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
+    const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
     setLines([{
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
@@ -168,7 +169,7 @@ export default function BuildOrder() {
       unit: contractPrice,
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
-      variants: p.variants || null, variant: '', mld: '',
+      variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null,
     }, ...lines])
   }
 
@@ -183,6 +184,7 @@ export default function BuildOrder() {
     }
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
+    const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
     setLines([{
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
@@ -190,7 +192,7 @@ export default function BuildOrder() {
       unit: contractPrice,
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
-      variants: p.variants || null, variant: '', mld: '',
+      variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null,
     }, ...lines])
   }
 
@@ -235,7 +237,8 @@ export default function BuildOrder() {
         } else {
           const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
           const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null })
         }
       })
       return next
@@ -258,7 +261,8 @@ export default function BuildOrder() {
         } else {
           const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
           const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
-          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: '', mld: '' })
+          const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
+          next.unshift({ lineId: nextLineId(), sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice, discount: p.discount || 0, unit: contractPrice, qty, description: '', stock: p.stock, stockState: p.stockState, variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null })
         }
       })
       return next
@@ -296,7 +300,7 @@ function handleClear() {
   }
 
   function submitOrder(comment) {
-    const orderId = 'SO-2026-' + Math.floor(40000 + Math.random() * 9000)
+    const orderId = 'DR-2026-' + Math.floor(40000 + Math.random() * 9000)
     navigate(`/orders/${orderId}/submitted`, {
       state: {
         order: { ...order, lines, description: orderDesc, poNumber, shipDate, agent, manualPick, total, approverComment: comment || '' },

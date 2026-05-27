@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fmt } from '../../utils/format'
+import { fmt, calcPricingBreakdown } from '../../utils/format'
 import { SHIPPING_AGENTS, MANUAL_PICK_REASONS } from '../../data'
 import Icon from '../../components/Icon'
 import Switch from '../../components/Switch'
@@ -40,6 +40,9 @@ export default function BasketPanel({
   const unitCount = lines.reduce((s, l) => s + l.qty, 0)
   const hasLines = lines.length > 0
 
+  // Pricing breakdown
+  const { contractTotal, mldTotal, manualTotal, hasMld, hasManual } = calcPricingBreakdown(lines)
+
   return (
     <div className="panel">
       <div className="panel__head">
@@ -76,6 +79,22 @@ export default function BasketPanel({
           {/* Order summary */}
           <div className="col" style={{ gap: 6 }}>
             <div className="row between" style={{ alignItems: 'baseline' }}>
+              <span className="muted" style={{ fontSize: 13 }}>Contract price</span>
+              <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(contractTotal)}</span>
+            </div>
+            {hasMld && (
+              <div className="row between" style={{ alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#059669' }}>MLD discount</span>
+                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(mldTotal)}</span>
+              </div>
+            )}
+            {hasManual && (
+              <div className="row between" style={{ alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#059669' }}>Manual reductions</span>
+                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(manualTotal)}</span>
+              </div>
+            )}
+            <div className="row between" style={{ alignItems: 'baseline', marginTop: (hasMld || hasManual) ? 2 : 0, paddingTop: (hasMld || hasManual) ? 6 : 0, borderTop: (hasMld || hasManual) ? '1px solid var(--border)' : 'none' }}>
               <span className="muted" style={{ fontSize: 13 }}>Subtotal</span>
               <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(subtotal)}</span>
             </div>

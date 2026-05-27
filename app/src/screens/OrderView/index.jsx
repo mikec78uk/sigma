@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { HOSPITAL_CLIENTS, SHIPPING_AGENTS, CATALOGUE, ORDERS_SEED } from '../../data'
-import { fmt } from '../../utils/format'
+import { fmt, fmtOrderId } from '../../utils/format'
 import Icon from '../../components/Icon'
 import StatusBadge from '../../components/StatusBadge'
 import StockDot from '../../components/StockDot'
@@ -58,6 +58,7 @@ export default function OrderView() {
 
   const client = HOSPITAL_CLIENTS.find(c => c.id === order?.clientId)
   const agentLabel = SHIPPING_AGENTS.find(a => a.code === order?.agent)?.label
+  const displayOrderId = fmtOrderId(orderId, order?.status)
 
   const prevId = orderIndex > 0 ? orderIds[orderIndex - 1] : null
   const nextId = orderIndex >= 0 && orderIndex < orderIds.length - 1 ? orderIds[orderIndex + 1] : null
@@ -112,14 +113,14 @@ export default function OrderView() {
       <div className="crumbs">
         <a onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Orders</a>
         <Icon name="chevron-right" size={12} className="crumbs__sep" />
-        <span style={{ color: 'var(--ink-2)' }}>{orderId}</span>
+        <span style={{ color: 'var(--ink-2)' }}>{displayOrderId}</span>
       </div>
 
       {/* Page header */}
       <div className="page-h">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <h1 className="page-h__title" style={{ marginBottom: 0 }}>{orderId}</h1>
+            <h1 className="page-h__title" style={{ marginBottom: 0 }}>{displayOrderId}</h1>
             <StatusBadge status={order.status} />
           </div>
           <div className="page-h__sub">
@@ -147,28 +148,6 @@ export default function OrderView() {
           <button className="btn" onClick={() => navigate('/')}>
             <Icon name="back" size={14} /> Back to orders
           </button>
-          {orderIds.length > 1 && (
-            <div className="row gap-0" style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
-              <button
-                className="btn"
-                disabled={!prevId}
-                onClick={() => goToOrder(prevId, orderIndex - 1)}
-                style={{ borderRadius: 0, border: 'none', borderRight: '1px solid var(--border)', padding: '0 10px', height: 32 }}
-                title="Previous order"
-              >
-                <Icon name="chevron-left" size={14} />
-              </button>
-<button
-                className="btn"
-                disabled={!nextId}
-                onClick={() => goToOrder(nextId, orderIndex + 1)}
-                style={{ borderRadius: 0, border: 'none', borderLeft: '1px solid var(--border)', padding: '0 10px', height: 32 }}
-                title="Next order"
-              >
-                <Icon name="chevron-right" size={14} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -180,7 +159,7 @@ export default function OrderView() {
               <div className="row between">
                 <div>
                   <div className="label" style={{ marginBottom: 4 }}>Reject order</div>
-                  <h2>Reject {orderId}</h2>
+                  <h2>Reject {displayOrderId}</h2>
                 </div>
                 <button className="btn btn--ghost btn--icon" onClick={() => setRejectModalOpen(false)}><Icon name="x" size={16} /></button>
               </div>
@@ -275,7 +254,7 @@ export default function OrderView() {
             <h3 style={{ fontSize: 15 }}>Order details</h3>
           </div>
           <div style={{ padding: '0 24px 20px' }}>
-            <MetaRow label="Order ID"           value={<span className="mono" style={{ fontWeight: 600 }}>{orderId}</span>} />
+            <MetaRow label="Order ID"           value={<span className="mono" style={{ fontWeight: 600 }}>{displayOrderId}</span>} />
             <MetaRow label="Status"             value={<StatusBadge status={order.status} />} />
             <MetaRow label="Order type"         value={order.type === 'nrt' ? 'Nicotine Replacement Therapy (NRT)' : 'Hospital / Bulk / MLD'} />
             <MetaRow label="Client"             value={client ? `${client.code} — ${client.name}${client.postcode ? ` (${client.postcode})` : ''}` : null} />

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { HOSPITAL_CLIENTS } from '../../data'
-import { fmt } from '../../utils/format'
+import { fmt, calcPricingBreakdown } from '../../utils/format'
 import Icon from '../../components/Icon'
 
 export default function OrderSubmitted() {
@@ -9,7 +9,7 @@ export default function OrderSubmitted() {
   const order = location.state?.order
 
   const client = HOSPITAL_CLIENTS.find(c => c.id === order?.clientId)
-  const orderId = useLocation().pathname.split('/')[2] || 'SO-2026-00000'
+  const orderId = useLocation().pathname.split('/')[2] || 'DR-2026-00000'
 
   if (!order) {
     return (
@@ -29,7 +29,8 @@ export default function OrderSubmitted() {
   const placedAt = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }).toUpperCase()
     + ', ' + now.toLocaleDateString('en-GB')
 
-  const orderTotal = (order.lines || []).reduce((s, l) => s + l.unit * l.qty, 0)
+  const { contractTotal, mldTotal, manualTotal, hasMld, hasManual, subtotal: orderSubtotal } = calcPricingBreakdown(order.lines || [])
+  const orderTotal = orderSubtotal
 
   return (
     <div className="page__body">
@@ -84,7 +85,7 @@ export default function OrderSubmitted() {
         {/* Products table */}
         <div style={{ marginTop: needsApproval ? 20 : 0 }}>
           {/* Column headers */}
-          <div style={{ display: 'flex', alignItems: 'center', padding: '10px 32px', borderTop: needsApproval ? '1px solid var(--border)' : undefined, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '10px 32px', borderTop: needsApproval ? '1px solid var(--border)' : undefined, borderBottom: '1px solid var(--border)', gap: 14 }}>
             <div className="label" style={{ flex: 1 }}>{order.lines?.length ?? 0} product{order.lines?.length !== 1 ? 's' : ''}</div>
             <div className="label" style={{ width: 100, textAlign: 'right' }}>Pack</div>
             <div className="label" style={{ width: 60, textAlign: 'right' }}>Qty</div>
@@ -94,6 +95,14 @@ export default function OrderSubmitted() {
           {/* Product rows */}
           {(order.lines || []).map(l => (
             <div key={l.lineId ?? l.sku} style={{ display: 'flex', alignItems: 'center', padding: '12px 32px', borderBottom: '1px solid var(--border)', gap: 14 }}>
+              <div style={{ width: 36, flexShrink: 0 }}>
+                {l.dt === true && (
+                  <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', padding: '2px 6px', borderRadius: 4, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>DT</span>
+                )}
+                {l.dt === false && (
+                  <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', padding: '2px 6px', borderRadius: 4, background: 'var(--surface-2)', color: 'var(--ink-3)', border: '1px solid var(--border)' }}>ND</span>
+                )}
+              </div>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--ink-2)' }}>{l.name}</div>
               <div style={{ width: 100, textAlign: 'right', fontSize: 13, color: 'var(--ink-3)' }}>{l.pack || '—'}</div>
               <div className="mono tnum" style={{ width: 60, textAlign: 'right', fontSize: 13 }}>{l.qty.toFixed(2)}</div>
@@ -101,10 +110,36 @@ export default function OrderSubmitted() {
             </div>
           ))}
 
-          {/* Total */}
-          <div style={{ display: 'flex', alignItems: 'center', padding: '14px 32px' }}>
-            <div style={{ flex: 1, fontWeight: 700, fontSize: 15 }}>Total</div>
-            <div className="mono tnum" style={{ width: 90, textAlign: 'right', fontWeight: 700, fontSize: 15 }}>{fmt(orderTotal)}</div>
+          {/* Pricing breakdown */}
+          <div style={{ padding: '14px 32px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="muted" style={{ fontSize: 13 }}>Contract price</span>
+              <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(contractTotal)}</span>
+            </div>
+            {hasMld && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#059669' }}>MLD discount</span>
+                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(mldTotal)}</span>
+              </div>
+            )}
+            {hasManual && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#059669' }}>Manual reductions</span>
+                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(manualTotal)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: (hasMld || hasManual) ? 2 : 0, paddingTop: (hasMld || hasManual) ? 6 : 0, borderTop: (hasMld || hasManual) ? '1px solid var(--border)' : 'none' }}>
+              <span className="muted" style={{ fontSize: 13 }}>Subtotal</span>
+              <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(orderTotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="muted" style={{ fontSize: 13 }}>VAT</span>
+              <span className="muted" style={{ fontSize: 12 }}>Rated separately at invoice</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 4, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>Order Total</span>
+              <span className="mono tnum" style={{ fontWeight: 700, fontSize: 17 }}>{fmt(orderTotal)}</span>
+            </div>
           </div>
         </div>
 

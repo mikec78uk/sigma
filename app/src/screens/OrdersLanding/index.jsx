@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useMatch, useLocation } from 'react-router-dom'
 import { ORDERS_SEED, HOSPITAL_CLIENTS, CATALOGUE, NRT_CATALOGUE } from '../../data'
-import { fmt } from '../../utils/format'
+import { fmt, fmtOrderId } from '../../utils/format'
 import Icon from '../../components/Icon'
 import Pager from '../../components/Pager'
 import StatusBadge from '../../components/StatusBadge'
@@ -460,7 +460,7 @@ export default function OrdersLanding() {
                       }}
                     >
                       <td>
-                        <div className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{o.id}</div>
+                        <div className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{fmtOrderId(o.id, o.status)}</div>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {o.edi && (

@@ -34,6 +34,7 @@ export default function QuickEntryPanel({
   const [suggestions, setSuggestions] = useState([])
   const [allResults, setAllResults] = useState([])
   const [showAllModal, setShowAllModal] = useState(false)
+  const [modalPage, setModalPage] = useState(1)
   const [cursor, setCursor] = useState(-1)
   const [sortCol, setSortCol] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
@@ -66,6 +67,7 @@ export default function QuickEntryPanel({
     setSuggestions(results.slice(0, 5))
     setAllResults(results)
     setCursor(-1)
+    setModalPage(1)
   }, [q, catalogue])
 
   // Close suggestions on outside click
@@ -273,7 +275,7 @@ export default function QuickEntryPanel({
             })}
             {allResults.length > 5 && (
               <div
-                onMouseDown={() => { setSuggestions([]); setShowAllModal(true) }}
+                onMouseDown={() => { setSuggestions([]); setModalPage(1); setShowAllModal(true) }}
                 style={{
                   padding: '9px 12px', display: 'flex', alignItems: 'center',
                   justifyContent: 'space-between', cursor: 'pointer',
@@ -727,57 +729,105 @@ export default function QuickEntryPanel({
       )}
     </div>
     {/* All results modal */}
-    {showAllModal && (
-      <div className="scrim">
-        <div className="modal" style={{ maxWidth: 620, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-          <div className="modal__head">
-            <div className="row between">
-              <div>
-                <div className="label" style={{ marginBottom: 4 }}>Search results</div>
-                <h2 style={{ fontSize: 18 }}>{allResults.length} matching {allResults.length === 1 ? 'item' : 'items'}</h2>
+    {showAllModal && (() => {
+      const modalPageSize = 10
+      const modalTotalPages = Math.max(1, Math.ceil(allResults.length / modalPageSize))
+      const modalPaged = allResults.slice((modalPage - 1) * modalPageSize, modalPage * modalPageSize)
+
+      // Build page number list with ellipsis: always show first, last, and a window around current
+      function pageNumbers() {
+        if (modalTotalPages <= 7) return Array.from({ length: modalTotalPages }, (_, i) => i + 1)
+        const pages = []
+        pages.push(1)
+        if (modalPage > 3) pages.push('…')
+        for (let i = Math.max(2, modalPage - 1); i <= Math.min(modalTotalPages - 1, modalPage + 1); i++) pages.push(i)
+        if (modalPage < modalTotalPages - 2) pages.push('…')
+        pages.push(modalTotalPages)
+        return pages
+      }
+
+      return (
+        <div className="scrim">
+          <div className="modal" style={{ maxWidth: 860, display: 'flex', flexDirection: 'column' }}>
+            <div className="modal__head">
+              <div className="row between">
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Search results</div>
+                  <h2 style={{ fontSize: 18 }}>{allResults.length} matching {allResults.length === 1 ? 'item' : 'items'}</h2>
+                </div>
+                <button className="btn btn--ghost btn--icon" onClick={() => setShowAllModal(false)}>
+                  <Icon name="x" size={16} />
+                </button>
               </div>
-              <button className="btn btn--ghost btn--icon" onClick={() => setShowAllModal(false)}>
-                <Icon name="x" size={16} />
-              </button>
             </div>
-          </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {allResults.map((p, i) => {
-              const isOos = p.stockState === 'out'
-              const isExportRestricted = !!p.exportRestricted
-              const isBlocked = isOos || isExportRestricted
-              return (
-                <div key={p.sku} style={{
-                  padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
-                  borderBottom: '1px solid var(--border)',
-                  opacity: isBlocked ? 0.5 : 1,
-                }}>
-                  <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74, flexShrink: 0 }}>{p.sku}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5 }}>{p.name}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{p.pack}</div>
+            <div style={{ overflowY: 'auto', height: 580 }}>
+              {modalPaged.map((p) => {
+                const isOos = p.stockState === 'out'
+                const isExportRestricted = !!p.exportRestricted
+                const isBlocked = isOos || isExportRestricted
+                return (
+                  <div key={p.sku} style={{
+                    padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                    borderBottom: '1px solid var(--border)',
+                    opacity: isBlocked ? 0.5 : 1,
+                  }}>
+                    <span className="mono muted" style={{ fontSize: 11.5, minWidth: 74, flexShrink: 0 }}>{p.sku}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5 }}>{p.name}</div>
+                      <div className="muted" style={{ fontSize: 12 }}>{p.pack}</div>
+                    </div>
+                    <StockDot state={p.stockState} />
+                    {isExportRestricted ? (
+                      <span style={{ fontSize: 11.5, color: '#92400e', background: '#fefce8', border: '1px solid #fde68a', borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                        Not available for export
+                      </span>
+                    ) : (
+                      <button
+                        className="btn btn--sm btn--primary"
+                        disabled={isOos}
+                        onClick={() => { selectProduct(p); setShowAllModal(false) }}
+                      >
+                        + Add
+                      </button>
+                    )}
                   </div>
-                  <StockDot state={p.stockState} />
-                  {isExportRestricted ? (
-                    <span style={{ fontSize: 11.5, color: '#92400e', background: '#fefce8', border: '1px solid #fde68a', borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap' }}>
-                      Not available for export
-                    </span>
-                  ) : (
-                    <button
-                      className="btn btn--sm btn--primary"
-                      disabled={isOos}
-                      onClick={() => { selectProduct(p); setShowAllModal(false) }}
-                    >
-                      + Add
-                    </button>
+                )
+              })}
+            </div>
+            {modalTotalPages > 1 && (
+              <div style={{ borderTop: '1px solid var(--border)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--surface-2)', flexShrink: 0 }}>
+                <button
+                  className="btn btn--sm"
+                  disabled={modalPage === 1}
+                  onClick={() => setModalPage(p => p - 1)}
+                >
+                  <Icon name="arrow-left" size={13} /> Previous
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {pageNumbers().map((n, i) =>
+                    n === '…'
+                      ? <span key={'ellipsis-' + i} style={{ padding: '0 4px', fontSize: 13, color: 'var(--ink-3)' }}>…</span>
+                      : <button
+                          key={n}
+                          className={'btn btn--sm' + (n === modalPage ? ' btn--primary' : '')}
+                          style={{ minWidth: 32, padding: '0 8px' }}
+                          onClick={() => setModalPage(n)}
+                        >{n}</button>
                   )}
                 </div>
-              )
-            })}
+                <button
+                  className="btn btn--sm"
+                  disabled={modalPage === modalTotalPages}
+                  onClick={() => setModalPage(p => p + 1)}
+                >
+                  Next <Icon name="arrow-right" size={13} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    )}
+      )
+    })()}
     </>
   )
 }
