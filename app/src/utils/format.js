@@ -17,10 +17,15 @@ export function fmtOrderId(id, status) {
  * Returns: { contractTotal, mldTotal, manualTotal, subtotal, hasMld, hasManual }
  */
 export function calcPricingBreakdown(lines = []) {
-  const contractTotal = lines.reduce((s, l) => {
+  const listTotal = lines.reduce((s, l) => {
+    const base = l.listPrice || l.msp
+    return s + base * l.qty
+  }, 0)
+
+  const discountTotal = lines.reduce((s, l) => {
     const base = l.listPrice || l.msp
     const contractBase = Math.round(base * (1 - (l.discount || 0) / 100) * 100) / 100
-    return s + contractBase * l.qty
+    return s + Math.round((base - contractBase) * l.qty * 100) / 100
   }, 0)
 
   const mldTotal = lines.reduce((s, l) => {
@@ -29,7 +34,7 @@ export function calcPricingBreakdown(lines = []) {
     const base = l.listPrice || l.msp
     const contractBase = Math.round(base * (1 - (l.discount || 0) / 100) * 100) / 100
     const expectedUnit = Math.round(contractBase * (1 - mldPct / 100) * 100) / 100
-    if (Math.abs(l.unit - expectedUnit) > 0.005) return s // manual override — don't count as MLD
+    if (Math.abs(l.unit - expectedUnit) > 0.005) return s
     return s + Math.round((contractBase - expectedUnit) * l.qty * 100) / 100
   }, 0)
 
@@ -46,10 +51,12 @@ export function calcPricingBreakdown(lines = []) {
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0)
 
   return {
-    contractTotal,
+    listTotal,
+    discountTotal,
     mldTotal,
     manualTotal,
     subtotal,
+    hasDiscount: discountTotal > 0.005,
     hasMld: mldTotal > 0.005,
     hasManual: manualTotal > 0.005,
   }

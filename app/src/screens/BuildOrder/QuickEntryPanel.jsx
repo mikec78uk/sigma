@@ -178,7 +178,6 @@ export default function QuickEntryPanel({
     { col: 'name',          label: 'Product',     right: false },
     ...(hasVariantLines ? [{ col: 'variant', label: 'Variant', right: false }] : []),
     { col: 'qty',           label: 'Qty',         right: true  },
-    { col: 'msp',           label: 'MSP',         right: true  },
     { col: 'listPrice',     label: 'Unit',        right: true  },
     { col: 'discount',      label: 'Disc.',        right: true  },
     { col: 'mld',           label: 'MLD',          right: true  },
@@ -513,8 +512,6 @@ export default function QuickEntryPanel({
                           }}
                         />
                       </td>
-                      {/* MSP */}
-                      <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.msp)}</td>
                       {/* Unit Price — trade price before any discount */}
                       <td className="right mono tnum" style={{ fontSize: 12.5 }}>{fmt(l.listPrice || l.msp)}</td>
                       {/* Disc. — read-only catalogue discount % */}
@@ -560,7 +557,7 @@ export default function QuickEntryPanel({
                                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>£</span>
                                 <input
                                   className="input"
-                                  style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px', borderColor: isBelowMsp ? '#f59e0b' : undefined, background: isBelowMsp ? '#fffbeb' : undefined }}
+                                  style={{ width: 64, textAlign: 'right', fontSize: 12.5, padding: '3px 6px' }}
                                   value={displayUnit}
                                   onChange={e => setEditingUnit(prev => ({ ...prev, [l.lineId]: e.target.value }))}
                                   onFocus={() => startEditUnit(l.lineId, l.unit)}
@@ -594,11 +591,6 @@ export default function QuickEntryPanel({
                                   </div>
                                 )}
                               </div>
-                              {isBelowMsp && (
-                                <div style={{ fontSize: 10.5, color: '#92400e', marginTop: 2, whiteSpace: 'nowrap' }}>
-                                  Requires approval
-                                </div>
-                              )}
                             </div>
                           </td>
                         )

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { fmt, calcPricingBreakdown } from '../../utils/format'
+import { fmt } from '../../utils/format'
+import PricingBreakdown from '../../components/PricingBreakdown'
 import { SHIPPING_AGENTS, MANUAL_PICK_REASONS } from '../../data'
 import Icon from '../../components/Icon'
 import Switch from '../../components/Switch'
@@ -40,8 +41,6 @@ export default function BasketPanel({
   const unitCount = lines.reduce((s, l) => s + l.qty, 0)
   const hasLines = lines.length > 0
 
-  // Pricing breakdown
-  const { contractTotal, mldTotal, manualTotal, hasMld, hasManual } = calcPricingBreakdown(lines)
 
   return (
     <div className="panel">
@@ -77,36 +76,7 @@ export default function BasketPanel({
         <div className="basket-foot">
 
           {/* Order summary */}
-          <div className="col" style={{ gap: 6 }}>
-            <div className="row between" style={{ alignItems: 'baseline' }}>
-              <span className="muted" style={{ fontSize: 13 }}>Contract price</span>
-              <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(contractTotal)}</span>
-            </div>
-            {hasMld && (
-              <div className="row between" style={{ alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#059669' }}>MLD discount</span>
-                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(mldTotal)}</span>
-              </div>
-            )}
-            {hasManual && (
-              <div className="row between" style={{ alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#059669' }}>Manual reductions</span>
-                <span className="mono tnum" style={{ fontSize: 13, color: '#059669' }}>−{fmt(manualTotal)}</span>
-              </div>
-            )}
-            <div className="row between" style={{ alignItems: 'baseline', marginTop: (hasMld || hasManual) ? 2 : 0, paddingTop: (hasMld || hasManual) ? 6 : 0, borderTop: (hasMld || hasManual) ? '1px solid var(--border)' : 'none' }}>
-              <span className="muted" style={{ fontSize: 13 }}>Subtotal</span>
-              <span className="mono tnum muted" style={{ fontSize: 13 }}>{fmt(subtotal)}</span>
-            </div>
-            <div className="row between" style={{ alignItems: 'baseline' }}>
-              <span className="muted" style={{ fontSize: 13 }}>VAT</span>
-              <span className="muted" style={{ fontSize: 12 }}>Rated separately at invoice</span>
-            </div>
-            <div className="row between" style={{ alignItems: 'baseline', marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <span style={{ fontWeight: 700, fontSize: 15 }}>Order Total</span>
-              <span className="mono tnum" style={{ fontWeight: 700, fontSize: 17 }}>{fmt(total)}</span>
-            </div>
-          </div>
+          <PricingBreakdown lines={lines} />
 
           <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
 
