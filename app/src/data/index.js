@@ -63,7 +63,7 @@ export const NRT_CATEGORIES = ['All', 'Patches', 'Gum', 'Lozenges', 'Inhalator',
 
 export const NRT_CATALOGUE = [
   // Patches (12)
-  { sku: 'NC-10001', name: 'Nicorette Invisipatch 25mg/16hr Patch Step 1',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 8.50,  unit: 8.50,  stock: 2400, stockState: 'ok',  dt: false, controlled: false },
+  { sku: 'NC-10001', name: 'Nicorette Invisipatch 25mg/16hr Patch Step 1',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 8.50,  unit: 8.50,  stock: 0,    stockState: 'out', dt: false, controlled: false },
   { sku: 'NC-10002', name: 'Nicorette Invisipatch 15mg/16hr Patch Step 2',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 7.20,  unit: 7.20,  stock: 1840, stockState: 'ok',  dt: false, controlled: false },
   { sku: 'NC-10003', name: 'Nicorette Invisipatch 10mg/16hr Patch Step 3',  pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 6.80,  unit: 6.80,  stock: 1620, stockState: 'ok',  dt: false, controlled: false },
   { sku: 'NC-10004', name: 'NiQuitin Clear 21mg/24hr Patch Step 1',         pack: '7 patches',    form: 'PCH', category: 'Patches',   msp: 9.10,  unit: 9.10,  stock: 980,  stockState: 'ok',  dt: false, controlled: false },
