@@ -27,7 +27,8 @@
       "Bash(npx vite *)",
       "Bash(git checkout *)",
       "Bash(git merge *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git -C /Users/apple/Dropbox/Salmon/Sigma/design_handoff_hospital_ordering add app/src/screens/BuildOrder/SpreadsheetImportModal.jsx)"
     ]
   }
 }
