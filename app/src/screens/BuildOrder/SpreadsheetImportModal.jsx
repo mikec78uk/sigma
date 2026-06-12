@@ -216,7 +216,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
               <div className="row gap-8">
                 <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
                 <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
-                  Add {matched.length} matching {matched.length === 1 ? 'item' : 'items'} to order <Icon name="arrow-right" size={14} />
+                  Add {matched.length} matching {matched.length === 1 ? 'line' : 'lines'} to order <Icon name="arrow-right" size={14} />
                 </button>
               </div>
             </>
@@ -449,7 +449,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
             <div className="row gap-8">
               <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
               <button className="btn btn--primary" disabled={matched.length === 0} onClick={handleConfirm}>
-                Add {matched.length} matching {matched.length === 1 ? 'item' : 'items'} to order <Icon name="arrow-right" size={14} />
+                Add {matched.length} matching {matched.length === 1 ? 'line' : 'lines'} to order <Icon name="arrow-right" size={14} />
               </button>
             </div>
           </div>

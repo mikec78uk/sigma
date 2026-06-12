@@ -23,9 +23,7 @@ export default function AppHeader({ clientName = null }) {
         </svg>
       </div>
       <nav className="app-header__nav">
-        <a className={isOrders ? 'active' : ''} onClick={() => navigate('/')}>Orders</a>
-        <a>Catalogue</a>
-        <a>Clients</a>
+        <a className={isOrders ? 'active' : ''} onClick={() => navigate('/')}>Home</a>
       </nav>
       <div className="app-header__client">
         {clientName && (
