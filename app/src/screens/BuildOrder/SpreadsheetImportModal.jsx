@@ -33,11 +33,23 @@ function parseCSV(text) {
   return { rows, error: null }
 }
 
-// Problem tabs only — matched items are surfaced in the header/footer, not as a tab
-const PROBLEM_TABS = {
-  oos:        { color: '#991b1b', activeBg: '#fff5f5',  activeBorder: '#fecaca' },
-  wrongRoute: { color: '#0c4a6e', activeBg: '#f0f9ff',  activeBorder: '#bae6fd' },
-  unmatched:  { color: '#78350f', activeBg: '#fefce8',  activeBorder: '#fef08a' },
+const REASON_STYLES = {
+  oos:        { bg: '#fff5f5', color: '#991b1b', border: '#fecaca' },
+  wrongRoute: { bg: '#f0f9ff', color: '#0c4a6e', border: '#bae6fd' },
+  unmatched:  { bg: '#fefce8', color: '#78350f', border: '#fef08a' },
+}
+
+function ReasonBadge({ type, label }) {
+  const s = REASON_STYLES[type]
+  return (
+    <span style={{
+      display: 'inline-block', padding: '3px 8px', borderRadius: 4,
+      fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+    }}>
+      {label}
+    </span>
+  )
 }
 
 export default function SpreadsheetImportModal({ catalogue = [], orderType = 'hospital', onImport, onClose, initialFile }) {
@@ -49,23 +61,15 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
   const [outOfStock, setOutOfStock] = useState([])
   const [wrongRoute, setWrongRoute] = useState([])
   const [dragging, setDragging] = useState(false)
-  const [activeTab, setActiveTab] = useState(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const inputRef = useRef(null)
 
   const otherCatalogue = orderType === 'nrt' ? CATALOGUE : []
-  const otherType = ORDER_TYPES.find(t => t.id !== orderType)
 
   useEffect(() => {
     if (initialFile) processFile(initialFile)
   }, [])
-
-  function switchTab(id) {
-    setActiveTab(id)
-    setSearch('')
-    setPage(1)
-  }
 
   function processFile(file) {
     if (!file) return
@@ -103,11 +107,6 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
       setUnmatched(unmatchedRows)
       setOutOfStock(oosRows)
       setWrongRoute(wrongRouteRows)
-
-      const firstTab = oosRows.length > 0 ? 'oos'
-        : wrongRouteRows.length > 0 ? 'wrongRoute'
-        : 'unmatched'
-      setActiveTab(firstTab)
       setSearch('')
       setPage(1)
       setStep('preview')
@@ -138,38 +137,21 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
 
   const estimatedTotal = matched.reduce((s, r) => s + (r.product.listPrice ?? r.product.msp) * r.qty, 0)
 
-  // Problem tabs only (shown in the tab strip)
-  const problemTabs = [
-    outOfStock.length > 0 && { id: 'oos', count: outOfStock.length, label: 'insufficient stock', data: outOfStock, ...PROBLEM_TABS.oos },
-    wrongRoute.length > 0 && { id: 'wrongRoute', count: wrongRoute.length, label: orderType === 'nrt' ? 'non-NRT codes' : 'non-hospital codes', data: wrongRoute, ...PROBLEM_TABS.wrongRoute },
-    unmatched.length > 0 && { id: 'unmatched', count: unmatched.length, label: 'unrecognised', data: unmatched, ...PROBLEM_TABS.unmatched },
-  ].filter(Boolean)
+  const wrongRouteLabel = orderType === 'nrt' ? 'Non-NRT item' : 'Non-hospital item'
 
-  const activeTabDef = problemTabs.find(t => t.id === activeTab) || problemTabs[0]
-
-  // Tab heading / description
-  const tabMeta = {
-    oos: {
-      heading: 'Insufficient stock',
-      description: 'These products cannot be fulfilled at the requested quantity and will not be added to the basket.',
-    },
-    wrongRoute: {
-      heading: orderType === 'nrt' ? 'Available via Hospital, not NRT' : 'Available via NRT, not Hospital',
-      description: `These ${wrongRoute.length === 1 ? 'product is' : 'products are'} only available on the ${otherType?.short ?? 'other'} order route and won't be added here.`,
-    },
-    unmatched: {
-      heading: 'Unrecognised codes',
-      description: 'These SKUs were not found in any product catalogue. Check for typos. They will be skipped.',
-    },
-  }
+  // Combined problem rows, sorted by original row number
+  const allProblems = useMemo(() => [
+    ...outOfStock.map(r => ({ ...r, issueType: 'oos' })),
+    ...wrongRoute.map(r => ({ ...r, issueType: 'wrongRoute' })),
+    ...unmatched.map(r => ({ ...r, issueType: 'unmatched' })),
+  ].sort((a, b) => (a.row ?? 0) - (b.row ?? 0)), [outOfStock, wrongRoute, unmatched])
 
   // Filter + paginate
   const filteredRows = useMemo(() => {
-    if (!activeTabDef) return []
     const q = search.trim().toLowerCase()
-    if (!q) return activeTabDef.data
-    return activeTabDef.data.filter(r => r.sku.toLowerCase().includes(q))
-  }, [activeTabDef, search])
+    if (!q) return allProblems
+    return allProblems.filter(r => r.sku.toLowerCase().includes(q))
+  }, [allProblems, search])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
   const clampedPage = Math.min(page, totalPages)
@@ -208,7 +190,7 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
                   <div style={{ fontWeight: 700, fontSize: 19, marginBottom: 3 }}>There was an issue with your upload</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
                     {matched.length > 0
-                      ? <>We matched <b style={{ color: 'var(--ink-2)' }}>{matched.length} {matched.length === 1 ? 'product line' : 'product lines'}</b>, but identified the following issues</>
+                      ? <>We matched <b style={{ color: 'var(--ink-2)' }}>{matched.length} {matched.length === 1 ? 'product line' : 'product lines'}</b>, but identified <b style={{ color: 'var(--ink-2)' }}>{allProblems.length} {allProblems.length === 1 ? 'product line' : 'product lines'}</b> with issues</>
                       : 'None of the items in this file could be matched'}
                   </div>
                 </div>
@@ -281,126 +263,71 @@ export default function SpreadsheetImportModal({ catalogue = [], orderType = 'ho
           {step === 'preview' && (
             <div className="col gap-0">
 
-              {/* Tab strip */}
-              <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-                {problemTabs.map(tab => {
-                  const isActive = (activeTab || problemTabs[0]?.id) === tab.id
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => switchTab(tab.id)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 7,
-                        padding: '10px 18px',
-                        border: 'none',
-                        borderBottom: isActive ? `2px solid ${tab.color}` : '2px solid transparent',
-                        background: isActive ? tab.activeBg : 'transparent',
-                        cursor: 'pointer',
-                        marginBottom: -1,
-                        borderRadius: '6px 6px 0 0',
-                        transition: 'background 0.12s',
-                      }}
-                    >
-                      <span style={{ fontSize: 15, fontWeight: 700, color: tab.color, lineHeight: 1 }}>{tab.count}</span>
-                      <span style={{ fontSize: 13, color: isActive ? tab.color : 'var(--ink-3)', fontWeight: isActive ? 600 : 400 }}>
-                        {tab.label}
-                      </span>
-                    </button>
-                  )
-                })}
+              {/* Search + count */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                  <b style={{ color: 'var(--ink-2)' }}>{allProblems.length}</b> {allProblems.length === 1 ? 'line' : 'lines'} with issues
+                </div>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(1) }}
+                  placeholder="Search by product code…"
+                  className="input"
+                  style={{ width: 240, fontSize: 13 }}
+                />
               </div>
 
-              {/* Tab heading row: title + description left, search right */}
-              {activeTabDef && tabMeta[activeTab] && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: activeTabDef.color, marginBottom: 4 }}>
-                      {tabMeta[activeTab].heading}
-                    </div>
-                    <div style={{ fontSize: 13, color: activeTabDef.color, opacity: 0.8 }}>
-                      {tabMeta[activeTab].description}
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={e => { setSearch(e.target.value); setPage(1) }}
-                    placeholder="Search by product code…"
-                    className="input"
-                    style={{ width: 240, fontSize: 13, flexShrink: 0 }}
-                  />
-                </div>
-              )}
-
-              {/* Table */}
-              {activeTabDef && (
-                <div style={{ border: `1px solid ${activeTabDef?.activeBorder ?? 'var(--border)'}`, borderRadius: 8, overflow: 'hidden', background: activeTabDef?.activeBg ?? 'var(--surface)' }}>
-                  <table className="tbl">
-                    <thead>
-                      {activeTab === 'oos' && (
-                        <tr>
-                          <th style={{ width: 48 }}>Row</th>
-                          <th style={{ width: 110, textAlign: 'left' }}>SKU</th>
-                          <th>Product</th>
-                          <th className="right" style={{ width: 90 }}>Requested</th>
-                          <th className="right" style={{ width: 90 }}>Available</th>
-                        </tr>
-                      )}
-                      {activeTab === 'wrongRoute' && (
-                        <tr>
-                          <th style={{ width: 48 }}>Row</th>
-                          <th style={{ width: 110, textAlign: 'left' }}>SKU</th>
-                          <th>Product</th>
-                          <th className="right" style={{ width: 60 }}>Qty</th>
-                        </tr>
-                      )}
-                      {activeTab === 'unmatched' && (
-                        <tr>
-                          <th style={{ width: 48 }}>Row</th>
-                          <th style={{ textAlign: 'left' }}>SKU from file</th>
-                          <th className="right" style={{ width: 60 }}>Qty</th>
-                        </tr>
-                      )}
-                    </thead>
-                    <tbody>
-                      {pageRows.length === 0 && (
-                        <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-3)', fontSize: 13 }}>
-                            No results match your search.
-                          </td>
-                        </tr>
-                      )}
-                      {activeTab === 'oos' && pageRows.map((r, i) => (
-                        <tr key={i}>
-                          <td className="mono muted" style={{ fontSize: 12 }}>{r.row ?? '—'}</td>
-                          <td className="mono" style={{ fontSize: 12 }}>{r.sku}</td>
-                          <td><div style={{ fontSize: 13 }}>{r.product.name}</div></td>
-                          <td className="right mono tnum">{r.qty}</td>
-                          <td className="right mono tnum" style={{ color: r.available === 0 ? '#991b1b' : '#92400e', fontWeight: 600 }}>{r.available}</td>
-                        </tr>
-                      ))}
-                      {activeTab === 'wrongRoute' && pageRows.map((r, i) => (
-                        <tr key={i}>
-                          <td className="mono muted" style={{ fontSize: 12 }}>{r.row ?? '—'}</td>
-                          <td className="mono" style={{ fontSize: 12 }}>{r.sku}</td>
-                          <td>
-                            <div style={{ fontSize: 13 }}>{r.product.name}</div>
-                            <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>{r.product.pack}</div>
-                          </td>
-                          <td className="right mono tnum">{r.qty}</td>
-                        </tr>
-                      ))}
-                      {activeTab === 'unmatched' && pageRows.map((r, i) => (
-                        <tr key={i}>
-                          <td className="mono muted" style={{ fontSize: 12 }}>{r.row ?? '—'}</td>
-                          <td className="mono" style={{ fontSize: 13 }}>{r.sku}</td>
-                          <td className="right mono tnum">{r.qty}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {/* Unified problems table */}
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--surface)' }}>
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 48 }}>Row</th>
+                      <th style={{ width: 110, textAlign: 'left' }}>SKU</th>
+                      <th>Product</th>
+                      <th style={{ width: 160 }}>Reason</th>
+                      <th className="right" style={{ width: 60 }}>Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-3)', fontSize: 13 }}>
+                          No results match your search.
+                        </td>
+                      </tr>
+                    )}
+                    {pageRows.map((r, i) => (
+                      <tr key={i}>
+                        <td className="mono muted" style={{ fontSize: 12 }}>{r.row ?? '—'}</td>
+                        <td className="mono" style={{ fontSize: 12 }}>{r.sku}</td>
+                        <td>
+                          {r.product ? (
+                            <>
+                              <div style={{ fontSize: 13 }}>{r.product.name}</div>
+                              <div className="muted" style={{ fontSize: 11.5, marginTop: 1 }}>{r.product.pack}</div>
+                            </>
+                          ) : (
+                            <span className="muted" style={{ fontSize: 13 }}>—</span>
+                          )}
+                        </td>
+                        <td>
+                          <ReasonBadge
+                            type={r.issueType}
+                            label={
+                              r.issueType === 'oos' ? 'Insufficient stock'
+                              : r.issueType === 'wrongRoute' ? wrongRouteLabel
+                              : 'Unrecognised code'
+                            }
+                          />
+                        </td>
+                        <td className="right mono tnum">{r.qty}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
