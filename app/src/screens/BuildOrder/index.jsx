@@ -162,7 +162,7 @@ export default function BuildOrder() {
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
     const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
-    setLines([{
+    setLines([...lines, {
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
       discount: p.discount || 0,
@@ -170,7 +170,7 @@ export default function BuildOrder() {
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null,
-    }, ...lines])
+    }])
   }
 
   function addToBasketQuick(p) {
@@ -185,7 +185,7 @@ export default function BuildOrder() {
     const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
     const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
     const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
-    setLines([{
+    setLines([...lines, {
       lineId: nextLineId(),
       sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
       discount: p.discount || 0,
@@ -193,7 +193,7 @@ export default function BuildOrder() {
       qty: 1, description: '',
       stock: p.stock, stockState: p.stockState,
       variants: p.variants || null, variant: defaultVariant, mld: '', dt: p.dt ?? null,
-    }, ...lines])
+    }])
   }
 
   function setVariant(lineId, variant) {
@@ -225,6 +225,19 @@ export default function BuildOrder() {
   }
 
   function removeLine(lineId) { setLines(lines.filter(l => l.lineId !== lineId)) }
+
+  function replaceLine(lineId, p) {
+    const listPrice = p.listPrice || Math.round(p.msp * 1.25 * 100) / 100
+    const contractPrice = Math.round(listPrice * (1 - (p.discount || 0) / 100) * 100) / 100
+    const defaultVariant = p.variants?.find(v => v.priority === 1)?.code || ''
+    setLines(lines.map(l => l.lineId === lineId ? {
+      ...l,
+      sku: p.sku, name: p.name, pack: p.pack, msp: p.msp, listPrice,
+      discount: p.discount || 0, unit: contractPrice, qty: 1,
+      stock: p.stock, stockState: p.stockState,
+      variants: p.variants || null, variant: defaultVariant, mld: '', description: '',
+    } : l))
+  }
 
   function handleImport(importedLines, importedUnmatched = [], importedOos = []) {
     setLines(prev => {
@@ -564,6 +577,7 @@ function handleClear() {
             setVariant={setVariant}
             setMld={setMld}
             removeLine={removeLine}
+            replaceLine={replaceLine}
             unmatchedImport={unmatchedImport}
             onDismissUnmatched={() => setUnmatchedImport([])}
             oosImport={oosImport}
