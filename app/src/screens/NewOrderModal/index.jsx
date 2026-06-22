@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HOSPITAL_CLIENTS } from '../../data'
 import Modal from '../../components/Modal'
@@ -9,6 +9,10 @@ export default function NewOrderModal() {
   const navigate = useNavigate()
   const [clientId, setClientId] = useState('')
   const [q, setQ] = useState('')
+  const [cursor, setCursor] = useState(-1)
+  const startBtnRef = useRef(null)
+  const listRef = useRef(null)
+  const focusStartRef = useRef(false)
 
   const clients = HOSPITAL_CLIENTS.filter(c =>
     !q.trim() ||
@@ -18,6 +22,40 @@ export default function NewOrderModal() {
   )
 
   const selectedClient = HOSPITAL_CLIENTS.find(c => c.id === clientId)
+
+  // Reset cursor when search query changes
+  useEffect(() => { setCursor(-1) }, [q])
+
+  // Focus Start button after clientId updates (button is disabled until then, so focus must wait)
+  useEffect(() => {
+    if (clientId && focusStartRef.current) {
+      focusStartRef.current = false
+      startBtnRef.current?.focus()
+    }
+  }, [clientId])
+
+  // Scroll keyboard-highlighted row into view
+  useEffect(() => {
+    if (cursor < 0 || !listRef.current) return
+    listRef.current.querySelectorAll('[data-idx]')[cursor]?.scrollIntoView({ block: 'nearest' })
+  }, [cursor])
+
+  function handleSearchKeyDown(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCursor(c => Math.min(c + 1, clients.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCursor(c => Math.max(c - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const pick = cursor >= 0 ? clients[cursor] : clients.length === 1 ? clients[0] : null
+      if (pick) {
+        focusStartRef.current = true
+        setClientId(pick.id)
+      }
+    }
+  }
 
   function handleStart() {
     if (!selectedClient) return
@@ -62,22 +100,24 @@ export default function NewOrderModal() {
               placeholder="Search by hospital name or account code…"
               value={q}
               onChange={e => setQ(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
-        <div style={{ minHeight: 320, maxHeight: 320, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-          {clients.map(c => (
+        <div ref={listRef} style={{ minHeight: 320, maxHeight: 320, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+          {clients.map((c, i) => (
             <div
               key={c.id}
-              onClick={() => setClientId(c.id)}
+              data-idx={i}
+              onClick={() => { focusStartRef.current = true; setClientId(c.id) }}
+              onMouseEnter={() => setCursor(i)}
+              onMouseLeave={() => setCursor(-1)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 16,
                 padding: '13px 16px', cursor: 'pointer',
                 borderBottom: '1px solid var(--border)',
-                background: clientId === c.id ? 'var(--surface-2)' : 'transparent',
+                background: clientId === c.id ? '#eff6ff' : cursor === i ? '#f5f5f4' : 'transparent',
               }}
-              onMouseEnter={e => { if (clientId !== c.id) e.currentTarget.style.background = 'var(--surface)' }}
-              onMouseLeave={e => { if (clientId !== c.id) e.currentTarget.style.background = 'transparent' }}
             >
               {/* Account code */}
               <span className="mono muted" style={{ fontSize: 12, flexShrink: 0, width: 64 }}>{c.code}</span>
@@ -117,7 +157,7 @@ export default function NewOrderModal() {
         </div>
         <div className="row gap-8">
           <button className="btn" onClick={() => navigate('/')}>Cancel</button>
-          <button className="btn btn--primary" disabled={!clientId} onClick={handleStart}>
+          <button ref={startBtnRef} className="btn btn--primary" disabled={!clientId} onClick={handleStart}>
             Start order <Icon name="arrow-right" size={14} />
           </button>
         </div>
